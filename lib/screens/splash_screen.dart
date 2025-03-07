@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 
+import 'package:guidera_app/screens/home_screen.dart';
+import 'package:guidera_app/theme/app_colors.dart'; // <-- Import your custom colors
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -78,8 +80,22 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    // Background: myBlack in dark mode, myWhite in light mode
+    final Color backgroundColor =
+    isDarkMode ? AppColors.myBlack : AppColors.myWhite;
+
+    // Text color for "uidera": myWhite in dark mode, myBlack in light mode
+    final Color guideraTextColor =
+    isDarkMode ? AppColors.myWhite : AppColors.myBlack;
+
+    // Hat color: darkBlue in dark mode, myBlack in light mode
+    final Color hatColor = isDarkMode ? AppColors.darkBlue : AppColors.myBlack;
+
+    // Line color: myWhite in dark mode, myBlack in light mode
+    final Color lineColor = isDarkMode ? AppColors.myWhite : AppColors.myBlack;
+
     return Scaffold(
-      backgroundColor: isDarkMode ? Colors.black : Colors.white,
+      backgroundColor: backgroundColor,
       body: Center(
         child: Stack(
           alignment: Alignment.center,
@@ -96,7 +112,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         fontSize: 40,
                         fontFamily: "ProductSans",
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue, // Blue color for "G"
+                        color: AppColors.lightBlue, // Always lightBlue for "G"
                       ),
                     ),
                     TextSpan(
@@ -105,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         fontSize: 40,
                         fontFamily: "ProductSans",
                         fontWeight: FontWeight.bold,
-                        color: isDarkMode ? Colors.white : Colors.black, // Black or white color for "uidera"
+                        color: guideraTextColor, // White in dark mode, black in light
                       ),
                     ),
                   ],
@@ -121,12 +137,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   top: MediaQuery.of(context).size.height * 0.42 - 25 + _hatAnimation.value,
                   left: MediaQuery.of(context).size.width * 0.28 - 3,
                   child: Transform.rotate(
-                    angle: -0.5, // Tilt angle in radians (-0.5 ≈ 28.6 degrees)
+                    angle: -0.5, // Tilt angle in radians (~ -28.6 degrees)
                     child: SvgPicture.asset(
                       "assets/images/hat.svg",
                       height: 40,
                       colorFilter: ColorFilter.mode(
-                        isDarkMode ? Colors.blue : Colors.black,
+                        hatColor, // darkBlue in dark mode, black in light
                         BlendMode.srcIn,
                       ),
                     ),
@@ -144,12 +160,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   child: ClipRect(
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      widthFactor: _lineAnimation.value, // Animate the width of the line
+                      widthFactor: _lineAnimation.value, // Animate the width
                       child: SvgPicture.asset(
                         "assets/images/line.svg",
-                        width: 160, // Make it wide enough to cover the whole text
+                        width: 160, // Enough to cover the whole text
                         colorFilter: ColorFilter.mode(
-                          isDarkMode ? Colors.white : Colors.black,
+                          lineColor, // myWhite in dark mode, myBlack in light
                           BlendMode.srcIn,
                         ),
                       ),
@@ -159,7 +175,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               },
             ),
 
-            // Fade Animation (Optional: Apply to the entire Stack or specific widgets)
+            // Fade Animation (Optional: apply to entire Stack or specific widgets)
             FadeTransition(
               opacity: _fadeAnimation,
               child: Container(), // Replace with the widget you want to fade

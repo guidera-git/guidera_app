@@ -61,6 +61,10 @@ flutter:
   assets:
     - assets/images/hat.svg
     - assets/images/line.svg
+    - assets/images/analytics.svg
+    - assets/images/chatbot.svg
+    - assets/images/entry_test.svg
+    - assets/images/home.svg
   fonts:
     - family: ProductSans
       fonts:
