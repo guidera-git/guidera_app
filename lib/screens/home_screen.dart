@@ -161,7 +161,7 @@ class WelcomeCard extends StatelessWidget {
           // Right side: SVG avatar.
           SvgPicture.asset(
             'assets/images/student_laptop.svg', // Ensure this asset path is correct.
-            height: 150.0, // Adjust size as needed.
+            height: 90.0, // Adjust size as needed.
             width: 80.0,
           ),
         ],
