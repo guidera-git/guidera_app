@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.2.0 <3.7.0"
+  sdk: ">=3.2.0 <3.8.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -65,6 +65,8 @@ flutter:
     - assets/images/chatbot.svg
     - assets/images/entry_test.svg
     - assets/images/home.svg
+    - assets/images/student_login.svg
+    - assets/images/student_laptop.svg
   fonts:
     - family: ProductSans
       fonts:

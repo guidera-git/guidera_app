@@ -39,16 +39,16 @@ class GuideraHeader extends StatelessWidget {
                   TextSpan(
                     text: "G",
                     style: TextStyle(
-                      fontSize: 40,
+                      fontSize: 35,
                       fontFamily: "ProductSans",
                       fontWeight: FontWeight.bold,
                       color: gColor, // "G" is darkBlue
                     ),
                   ),
                   TextSpan(
-                    text: "uidera",
+                    text: "uidera.",
                     style: TextStyle(
-                      fontSize: 30,
+                      fontSize: 25,
                       fontFamily: "ProductSans",
                       fontWeight: FontWeight.bold,
                       color: uideraTextColor, // myGray or myBlack
@@ -60,8 +60,8 @@ class GuideraHeader extends StatelessWidget {
           ),
           // Graduation Hat (slight tilt)
           Positioned(
-            top: 55,
-            left: MediaQuery.of(context).size.width * 0.28 + 15,
+            top: 54,
+            left: MediaQuery.of(context).size.width * 0.28 + 18,
             child: Transform.rotate(
               angle: -0.5, // ~ -28.6 degrees
               child: SvgPicture.asset(
@@ -76,10 +76,10 @@ class GuideraHeader extends StatelessWidget {
           ),
           // Lifeline (Line) just below the text, static
           Positioned(
-            top: 89,
+            top: 84,
             child: SvgPicture.asset(
               "assets/images/line.svg",
-              width: 130,
+              width: 120,
               colorFilter: ColorFilter.mode(
                 lineColor, // myGray or myBlack
                 BlendMode.srcIn,

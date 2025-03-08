@@ -27,10 +27,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     // Hat Animation (Bounce)
     _hatController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 5),
     );
 
-    _hatAnimation = Tween<double>(begin: -100, end: 0).animate(
+    _hatAnimation = Tween<double>(begin: -200, end: 0).animate(
       CurvedAnimation(parent: _hatController, curve: Curves.bounceOut),
     );
 
@@ -39,7 +39,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     // Fade Animation
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 5),
     );
 
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
@@ -51,7 +51,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     // Line Filling Animation
     _lineController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 5),
     );
 
     _lineAnimation = Tween<double>(begin: 0, end: 1).animate(
@@ -60,8 +60,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
     _lineController.forward();
 
-    // Navigate to Home after 3 seconds
-    Timer(const Duration(seconds: 3), () {
+    //Navigate to Home after 3 seconds
+    Timer(const Duration(seconds: 5), () {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
@@ -89,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     isDarkMode ? AppColors.myWhite : AppColors.myBlack;
 
     // Hat color: darkBlue in dark mode, myBlack in light mode
-    final Color hatColor = isDarkMode ? AppColors.darkBlue : AppColors.myBlack;
+    final Color hatColor = isDarkMode ? AppColors.lightBlue : AppColors.myBlack;
 
     // Line color: myWhite in dark mode, myBlack in light mode
     final Color lineColor = isDarkMode ? AppColors.myWhite : AppColors.myBlack;
@@ -109,14 +109,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                     TextSpan(
                       text: "G",
                       style: TextStyle(
-                        fontSize: 40,
+                        fontSize: 50,
                         fontFamily: "ProductSans",
                         fontWeight: FontWeight.bold,
                         color: AppColors.lightBlue, // Always lightBlue for "G"
                       ),
                     ),
                     TextSpan(
-                      text: "uidera",
+                      text: "uidera.",
                       style: TextStyle(
                         fontSize: 40,
                         fontFamily: "ProductSans",
@@ -134,8 +134,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               animation: _hatAnimation,
               builder: (context, child) {
                 return Positioned(
-                  top: MediaQuery.of(context).size.height * 0.42 - 25 + _hatAnimation.value,
-                  left: MediaQuery.of(context).size.width * 0.28 - 3,
+                  top: MediaQuery.of(context).size.height * 0.42 - 22 + _hatAnimation.value,
+                  left: MediaQuery.of(context).size.width * 0.28 - 19,
                   child: Transform.rotate(
                     angle: -0.5, // Tilt angle in radians (~ -28.6 degrees)
                     child: SvgPicture.asset(
@@ -156,14 +156,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               animation: _lineAnimation,
               builder: (context, child) {
                 return Positioned(
-                  top: MediaQuery.of(context).size.height * 0.42 + 17,
+                  top: MediaQuery.of(context).size.height * 0.42 + 18,
                   child: ClipRect(
                     child: Align(
                       alignment: Alignment.centerLeft,
                       widthFactor: _lineAnimation.value, // Animate the width
                       child: SvgPicture.asset(
                         "assets/images/line.svg",
-                        width: 160, // Enough to cover the whole text
+                        width: 185, // Enough to cover the whole text
                         colorFilter: ColorFilter.mode(
                           lineColor, // myWhite in dark mode, myBlack in light
                           BlendMode.srcIn,
