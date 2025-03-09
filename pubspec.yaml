@@ -66,6 +66,9 @@ flutter:
     - assets/images/chatbot.svg
     - assets/images/entry_test.svg
     - assets/images/home.svg
+    - assets/images/save.svg
+    - assets/images/compare.svg
+    - assets/images/recommend.svg
     - assets/images/student_login.svg
     - assets/images/student_laptop.svg
     - assets/images/back.svg
@@ -74,6 +77,7 @@ flutter:
     - assets/images/test.svg
     - assets/images/chat.svg
     - assets/images/search.svg
+    - assets/images/send.svg
 
   fonts:
     - family: ProductSans
