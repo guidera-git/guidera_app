@@ -3,8 +3,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/Widgets/fancy_nav_item.dart';
-import 'package:guidera_app/theme/app_colors.dart';
+import 'package:guidera_app/screens/university_search_screen.dart';
+import 'package:guidera_app/theme/app_colors.dart'; // <-- Import your color constants
 import 'dart:math' as math;
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -16,12 +18,20 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-  // Color configurations
+
+  // final List<Widget> _screens = [
+  //   const HomeTab(), // Updated home tab with welcome card.
+  //   const UniversitySearchScreen(),
+  //   const Center(child: Text("Analytics Screen")),
+  //   const Center(child: Text("Entry Test Screen")),
+  //   const Center(child: Text("Chatbot Screen"))
+  // // Color configurations
   final List<LinearGradient> _cardGradients = [
     LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
     LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
     LinearGradient(colors: [AppColors.darkBlack, AppColors.darkBlack]),
     LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
+
   ];
 
   final List<Color> _titleCardColors = [
@@ -50,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
         titleCardColors: _titleCardColors,
         circleColors: _circleColors,
       ),
+      const UniversitySearchScreen(),
       const Center(child: Text("Analytics Screen")),
       const Center(child: Text("Entry Test Screen")),
       const Center(child: Text("Chatbot Screen")),
@@ -62,10 +73,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final Color backgroundColor = isDarkMode ? AppColors.myBlack : AppColors.myWhite;
 
     final List<FancyNavItem> items = [
-      FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
-      FancyNavItem(label: "Analytics", svgPath: "assets/images/analytics.svg"),
+      FancyNavItem(label: "Home",       svgPath: "assets/images/home.svg"),
+      FancyNavItem(label: "Find", svgPath: "assets/images/search.svg"),
+      FancyNavItem(label: "Analytics",  svgPath: "assets/images/analytics.svg"),
       FancyNavItem(label: "Entry Test", svgPath: "assets/images/entry_test.svg"),
-      FancyNavItem(label: "Chatbot", svgPath: "assets/images/chatbot.svg"),
+      FancyNavItem(label: "Chatbot",    svgPath: "assets/images/chatbot.svg"),
+
+
     ];
 
     return Scaffold(

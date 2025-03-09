@@ -19,7 +19,7 @@ class GuideraHeader extends StatelessWidget {
 
     // Hat color: darkBlue if dark mode, myBlack if light mode
     final Color hatColor =
-    isDarkMode ? AppColors.darkBlue : AppColors.myBlack;
+    isDarkMode ? AppColors.myWhite : AppColors.myBlack;
 
     // Line color: myGray if dark mode, myBlack if light mode
     final Color lineColor =
