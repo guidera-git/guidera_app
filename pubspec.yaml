@@ -73,6 +73,7 @@ flutter:
     - assets/images/visual.svg
     - assets/images/test.svg
     - assets/images/chat.svg
+    - assets/images/search.svg
 
   fonts:
     - family: ProductSans

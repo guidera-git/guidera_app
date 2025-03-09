@@ -19,13 +19,19 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
 
-
-  // Color configurations
+  // final List<Widget> _screens = [
+  //   const HomeTab(), // Updated home tab with welcome card.
+  //   const UniversitySearchScreen(),
+  //   const Center(child: Text("Analytics Screen")),
+  //   const Center(child: Text("Entry Test Screen")),
+  //   const Center(child: Text("Chatbot Screen"))
+  // // Color configurations
   final List<LinearGradient> _cardGradients = [
     LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
     LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
     LinearGradient(colors: [AppColors.darkBlack, AppColors.darkBlack]),
     LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
+
   ];
 
   final List<Color> _titleCardColors = [
@@ -54,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
         titleCardColors: _titleCardColors,
         circleColors: _circleColors,
       ),
+      const UniversitySearchScreen(),
       const Center(child: Text("Analytics Screen")),
       const Center(child: Text("Entry Test Screen")),
       const Center(child: Text("Chatbot Screen")),
@@ -66,12 +73,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final Color backgroundColor = isDarkMode ? AppColors.myBlack : AppColors.myWhite;
 
     final List<FancyNavItem> items = [
-
       FancyNavItem(label: "Home",       svgPath: "assets/images/home.svg"),
       FancyNavItem(label: "Find", svgPath: "assets/images/search.svg"),
       FancyNavItem(label: "Analytics",  svgPath: "assets/images/analytics.svg"),
       FancyNavItem(label: "Entry Test", svgPath: "assets/images/entry_test.svg"),
       FancyNavItem(label: "Chatbot",    svgPath: "assets/images/chatbot.svg"),
+
+
     ];
 
     return Scaffold(
