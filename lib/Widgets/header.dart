@@ -26,7 +26,7 @@ class GuideraHeader extends StatelessWidget {
     isDarkMode ? AppColors.myWhite : AppColors.myBlack;
 
     return SizedBox(
-      height: 150,
+      height: 120,
       child: Stack(
         alignment: Alignment.center,
         children: [

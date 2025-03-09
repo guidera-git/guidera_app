@@ -132,7 +132,7 @@ class UniversityCard extends StatelessWidget {
       stars.add(const Icon(Icons.star_half, color: Colors.yellow, size: 18));
     }
     while (stars.length < 5) {
-      stars.add(const Icon(Icons.star_border, color: Colors.yellow, size: 18));
+      stars.add(const Icon(Icons.star_border, color: Colors.black, size: 18));
     }
 
     return stars;

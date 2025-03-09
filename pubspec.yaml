@@ -69,6 +69,8 @@ flutter:
     - assets/images/save.svg
     - assets/images/compare.svg
     - assets/images/recommend.svg
+    - assets/images/location.svg
+    - assets/images/filter.svg
     - assets/images/student_login.svg
     - assets/images/student_laptop.svg
     - assets/images/back.svg
