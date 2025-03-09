@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart'; // Required for SVG images.
 import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/Widgets/fancy_nav_item.dart';
+import 'package:guidera_app/screens/university_search_screen.dart';
 import 'package:guidera_app/theme/app_colors.dart'; // <-- Import your color constants
 
 class HomeScreen extends StatefulWidget {
@@ -18,9 +19,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = [
     const HomeTab(), // Updated home tab with welcome card.
+    const UniversitySearchScreen(),
     const Center(child: Text("Analytics Screen")),
     const Center(child: Text("Entry Test Screen")),
-    const Center(child: Text("Chatbot Screen")),
+    const Center(child: Text("Chatbot Screen"))
   ];
 
   @override
@@ -35,9 +37,11 @@ class _HomeScreenState extends State<HomeScreen> {
     // Example items (icon + label) for the bottom navigation bar.
     final List<FancyNavItem> items = [
       FancyNavItem(label: "Home",       svgPath: "assets/images/home.svg"),
+      FancyNavItem(label: "Find", svgPath: "assets/images/search.svg"),
       FancyNavItem(label: "Analytics",  svgPath: "assets/images/analytics.svg"),
       FancyNavItem(label: "Entry Test", svgPath: "assets/images/entry_test.svg"),
       FancyNavItem(label: "Chatbot",    svgPath: "assets/images/chatbot.svg"),
+
     ];
 
     return Scaffold(
