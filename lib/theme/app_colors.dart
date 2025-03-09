@@ -7,6 +7,7 @@ class AppColors {
   static const Color lightBlue = Color(0xFF2D8CFF);
   static const Color darkGray = Color (0xFFFAF2F2);
   static const Color lightGray = Color (0xFFE7E7E7);
+  static const Color darkBlack = Color (0xFF000000);
   // Add as many light-theme colors as you need...
 
   // 2) Dark theme colors

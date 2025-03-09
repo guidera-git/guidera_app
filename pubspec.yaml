@@ -69,15 +69,11 @@ flutter:
     - assets/images/student_login.svg
     - assets/images/student_laptop.svg
     - assets/images/back.svg
-    - assets/images/compare.svg
-    - assets/images/dot.svg
-    - assets/images/search.svg
-    - assets/images/location.svg
-    - assets/images/filter.svg
-    - assets/images/recommend.svg
-    - assets/images/save.svg
-    - assets/images/send.svg
-    - assets/images/star.svg
+    - assets/images/find.svg
+    - assets/images/visual.svg
+    - assets/images/test.svg
+    - assets/images/chat.svg
+
   fonts:
     - family: ProductSans
       fonts:
