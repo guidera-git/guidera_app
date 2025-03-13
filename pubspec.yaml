@@ -32,6 +32,8 @@ dependencies:
     sdk: flutter
   flutter_svg: ^2.0.10
   intl: ^0.18.1
+  lottie: ^2.7.0
+  animated_text_kit: ^4.2.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -60,26 +62,9 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/hat.svg
-    - assets/images/line.svg
-    - assets/images/analytics.svg
-    - assets/images/chatbot.svg
-    - assets/images/entry_test.svg
-    - assets/images/home.svg
-    - assets/images/save.svg
-    - assets/images/compare.svg
-    - assets/images/recommend.svg
-    - assets/images/location.svg
-    - assets/images/filter.svg
-    - assets/images/student_login.svg
-    - assets/images/student_laptop.svg
-    - assets/images/back.svg
-    - assets/images/find.svg
-    - assets/images/visual.svg
-    - assets/images/test.svg
-    - assets/images/chat.svg
-    - assets/images/search.svg
-    - assets/images/send.svg
+    - assets/images/
+    - assets/animations/
+
 
   fonts:
     - family: ProductSans

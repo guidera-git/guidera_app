@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/models/university.dart';
+import 'package:guidera_app/screens/recommendation_loading_screen.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 
 class UniversitySearchScreen extends StatefulWidget {
@@ -254,7 +255,9 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
           bottom: 20,
           right: 20,
           child: ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context)=>RecommendationLoadingScreen()));
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.lightBlue,
               shape: RoundedRectangleBorder(
@@ -945,7 +948,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     );
   }
 }
-  class FilterOptions {
+class FilterOptions {
   String? location;
   List<String> degreeTypes = [];
   double minFee = 0;
@@ -953,4 +956,4 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   int minDuration = 1;
   double minRating = 0;
   bool hasScholarship = false;
-  }
+}
