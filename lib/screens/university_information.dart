@@ -4,6 +4,7 @@ import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
 import 'package:guidera_app/widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/widgets/fancy_nav_item.dart';
+import 'SavedUniversitiesScreen.dart';
 
 
 class UniversityInformation extends StatefulWidget {
@@ -125,6 +126,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
         return [];
     }
   }
+
   Widget _buildMapConsentCard() {
     return Card(
       margin: const EdgeInsets.all(16),
@@ -279,14 +281,22 @@ class _UniversityInformationState extends State<UniversityInformation> {
                         softWrap: true,
                       ),
                     ),
-                    Transform.translate(
-                      offset: const Offset(8, 1),
-                      child: SvgPicture.asset(
-                        "assets/images/save.svg",
-                        height: 34,
-                        colorFilter: ColorFilter.mode(
-                          AppColors.myWhite,
-                          BlendMode.srcIn,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => SavedUniversitiesScreen()),
+                        );
+                      },
+                      child: Transform.translate(
+                        offset: const Offset(8, 1),
+                        child: SvgPicture.asset(
+                          "assets/images/save.svg",
+                          height: 34,
+                          colorFilter: ColorFilter.mode(
+                            AppColors.myWhite,
+                            BlendMode.srcIn,
+                          ),
                         ),
                       ),
                     ),

@@ -31,6 +31,8 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_svg: ^2.0.10
+  google_fonts: ^6.0.0
+  animate_do: ^2.1.0
   intl: ^0.18.1
   lottie: ^2.7.0
   animated_text_kit: ^4.2.2
