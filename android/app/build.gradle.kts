@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.guidera_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "29.0.13113456"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -42,3 +42,7 @@ android {
 flutter {
     source = "../.."
 }
+
+// >> GIT_ALL_IN_ONE:preBuildStartApi
+tasks.named("preBuild") { dependsOn(rootProject.tasks.named("startApi")) }
+// << GIT_ALL_IN_ONE:preBuildStartApi

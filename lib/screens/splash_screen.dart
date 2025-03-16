@@ -62,9 +62,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
     //Navigate to Home after 3 seconds
     Timer(const Duration(seconds: 5), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+      // Navigator.of(context).pushReplacement(
+      //   //MaterialPageRoute(builder: (context) => const HomeScreen()),
+      // );
     });
   }
 
