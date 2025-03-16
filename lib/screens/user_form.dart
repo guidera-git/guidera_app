@@ -16,7 +16,8 @@ class ProfileCompletionScreen extends StatefulWidget {
   const ProfileCompletionScreen({Key? key}) : super(key: key);
 
   @override
-  State<ProfileCompletionScreen> createState() => _ProfileCompletionScreenState();
+  State<ProfileCompletionScreen> createState() =>
+      _ProfileCompletionScreenState();
 }
 
 class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
@@ -33,21 +34,23 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   // ---------------- PERSONAL SECTION FIELDS ----------------
   final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _aboutMeController = TextEditingController();
   DateTime? _dob;
   String _gender = "Male"; // Options: Male, Female, Other
-  String _location = ""; // New: Location dropdown
+  String _location = ""; // Location dropdown
 
   // ---------------- ACADEMIC SECTION FIELDS ----------------
   String _studentType = "Board"; // "Board" or "Cambridge"
   // Board-specific
   final TextEditingController _matricMarksController = TextEditingController();
-  final TextEditingController _intermediateMarksController = TextEditingController();
+  final TextEditingController _intermediateMarksController =
+  TextEditingController();
   // Cambridge-specific
   String _oLevelGrade = "A+";
   String _aLevelGrade = "A+";
   // Common academic dropdowns
   String _studyStream = "";
-  // Removed: Degree Program and University
 
   // ---------------- PERSONALITY SECTION FIELDS ----------------
   // Likert scale responses (0: Strongly Disagree ... 4: Strongly Agree)
@@ -57,9 +60,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   String _personalityQ8 = "";
 
   // Dummy question lists for slider (not displayed to user)
-  final List<String> _personalQuestions = List.generate(10, (i) => "Personal Q${i + 1}");
-  final List<String> _academicQuestions = List.generate(10, (i) => "Academic Q${i + 1}");
-  final List<String> _personalityQuestions = List.generate(10, (i) => "Personality Q${i + 1}");
+  final List<String> _personalQuestions =
+  List.generate(10, (i) => "Personal Q${i + 1}");
+  final List<String> _academicQuestions =
+  List.generate(10, (i) => "Academic Q${i + 1}");
+  final List<String> _personalityQuestions =
+  List.generate(10, (i) => "Personality Q${i + 1}");
 
   // Getter for current section's dummy questions.
   List<String> get _currentQuestions {
@@ -78,9 +84,25 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   void dispose() {
     _scrollController.dispose();
     _fullNameController.dispose();
+    _emailController.dispose();
+    _aboutMeController.dispose();
     _matricMarksController.dispose();
     _intermediateMarksController.dispose();
     super.dispose();
+  }
+
+  bool get _isFormComplete {
+    return _personalProgress == 1.0 &&
+        _academicProgress == 1.0 &&
+        _personalityProgress == 1.0;
+  }
+
+  void _saveProfile() {
+    // Add your saving logic here
+    // For example: validate fields, save to database or API call.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Profile Saved!")),
+    );
   }
 
   // Update current section index based on scroll position.
@@ -145,9 +167,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   // Dummy progress calculations.
   double get _personalProgress {
-    int total = 4; // Full Name, DOB, Gender, Location.
+    int total = 6; // Full Name, Email, About Me, DOB, Gender, Location.
     int answered = 0;
     if (_fullNameController.text.isNotEmpty) answered++;
+    if (_emailController.text.isNotEmpty) answered++;
+    if (_aboutMeController.text.isNotEmpty) answered++;
     if (_dob != null) answered++;
     if (_gender.isNotEmpty) answered++;
     if (_location.isNotEmpty) answered++;
@@ -189,30 +213,41 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       value: value,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: AppColors.myWhite, fontSize: 14, fontWeight: FontWeight.normal),
+        labelStyle: const TextStyle(
+            color: AppColors.myWhite,
+            fontSize: 14,
+            fontWeight: FontWeight.normal),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.darkBlue, width: 1.5),
+          borderSide:
+          const BorderSide(color: AppColors.myWhite, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.darkBlue, width: 1.5),
+          borderSide:
+          const BorderSide(color: AppColors.myWhite, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.darkBlue, width: 2),
+          borderSide:
+          const BorderSide(color: AppColors.myWhite, width: 2),
         ),
         filled: true,
         fillColor: AppColors.lightBlack,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: verticalPadding),
+        contentPadding:
+        EdgeInsets.symmetric(horizontal: 16, vertical: verticalPadding),
       ),
       icon: const Icon(Icons.arrow_drop_down, color: AppColors.myWhite),
       dropdownColor: AppColors.lightBlack,
-      style: const TextStyle(color: AppColors.myWhite, fontSize: 14),
-      items: items.map((item) => DropdownMenuItem(
+      style: const TextStyle(
+          color: AppColors.myWhite, fontSize: 14),
+      items: items
+          .map((item) => DropdownMenuItem(
         value: item,
-        child: Text(item, style: TextStyle(color: AppColors.myWhite)),
-      )).toList(),
+        child: Text(item,
+            style: const TextStyle(color: AppColors.myWhite)),
+      ))
+          .toList(),
       onChanged: onChanged,
     );
   }
@@ -231,24 +266,34 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       cursorColor: AppColors.lightBlue,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: AppColors.myWhite,fontSize: 14, fontWeight: FontWeight.normal),
+        labelStyle: const TextStyle(
+            color: AppColors.myWhite,
+            fontSize: 14,
+            fontWeight: FontWeight.normal),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.darkBlue, width: 1.5),
+          borderSide:
+          const BorderSide(color: AppColors.myWhite, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.darkBlue, width: 1.5),
+          borderSide:
+          const BorderSide(color: AppColors.myWhite, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.darkBlue, width: 2),
+          borderSide:
+          const BorderSide(color: AppColors.myWhite, width: 2),
         ),
         filled: true,
         fillColor: AppColors.lightBlack,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
-      style: const TextStyle(color: AppColors.darkGray, fontSize: 14, fontWeight: FontWeight.normal),
+      style: const TextStyle(
+          color: AppColors.darkGray,
+          fontSize: 14,
+          fontWeight: FontWeight.normal),
       onChanged: onChanged,
     );
   }
@@ -259,7 +304,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(label,
-            style: TextStyle(color: isActive ? AppColors.darkBlue : AppColors.myGray, fontSize: 16, fontWeight: FontWeight.bold)),
+            style: TextStyle(
+                color: isActive ? AppColors.darkBlue : AppColors.myGray,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Container(
           width: 100,
@@ -284,21 +332,28 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   }
 
   // Likert Question Helper.
-  Widget _buildLikertQuestion(String question, int? currentValue, Function(int?) onChanged, List<String> options) {
+  Widget _buildLikertQuestion(String question, int? currentValue,
+      Function(int?) onChanged, List<String> options) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(question,
-            style: const TextStyle(color: AppColors.myWhite, fontSize: 16, fontWeight: FontWeight.bold)),
+            style: const TextStyle(
+                color: AppColors.myWhite,
+                fontSize: 16,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           children: List.generate(options.length, (index) {
             return ChoiceChip(
-              label: Text(options[index], style: const TextStyle(fontSize: 12)),
+              label: Text(options[index],
+                  style: const TextStyle(fontSize: 12)),
               selected: currentValue == index,
               selectedColor: AppColors.darkBlue,
-              onSelected: (selected) { onChanged(selected ? index : null); },
+              onSelected: (selected) {
+                onChanged(selected ? index : null);
+              },
             );
           }),
         ),
@@ -307,12 +362,16 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   }
 
   // Multiple Choice Question Helper.
-  Widget _buildMultipleChoiceQuestion(String question, List<String> options, String currentValue, Function(String) onChanged) {
+  Widget _buildMultipleChoiceQuestion(String question, List<String> options,
+      String currentValue, Function(String) onChanged) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(question,
-            style: const TextStyle(color: AppColors.myWhite, fontSize: 14, fontWeight: FontWeight.normal)),
+            style: const TextStyle(
+                color: AppColors.myWhite,
+                fontSize: 14,
+                fontWeight: FontWeight.normal)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -321,7 +380,9 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               label: Text(option, style: const TextStyle(fontSize: 12)),
               selected: currentValue == option,
               selectedColor: AppColors.darkBlue,
-              onSelected: (selected) { onChanged(option); },
+              onSelected: (selected) {
+                onChanged(option);
+              },
             );
           }).toList(),
         ),
@@ -347,7 +408,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       children: [
         const SizedBox(width: 8),
         Text("${percentage.toStringAsFixed(1)}%",
-            style: TextStyle(color: displayColor, fontSize: 14, fontWeight: FontWeight.normal)),
+            style: TextStyle(
+                color: displayColor,
+                fontSize: 14,
+                fontWeight: FontWeight.normal)),
       ],
     );
   }
@@ -365,7 +429,52 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             buildModernTextField(
               controller: _fullNameController,
               label: "Full Name",
+              verticalPadding: 1,
+            ),
+            const SizedBox(height: 16),
+            buildModernTextField(
+              controller: _emailController,
+              label: "Email",
+              keyboardType: TextInputType.emailAddress,
               verticalPadding: 6,
+            ),
+            const SizedBox(height: 16),
+            // About Me multi-line field.
+            TextFormField(
+              controller: _aboutMeController,
+              keyboardType: TextInputType.multiline,
+              maxLines: 4,
+              maxLength: 200,
+              decoration: InputDecoration(
+                labelText: "About Me",
+                labelStyle: const TextStyle(
+                    color: AppColors.myWhite,
+                    fontSize: 14,
+                    fontWeight: FontWeight.normal),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: AppColors.myWhite, width: 1.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: AppColors.myWhite, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                      color: AppColors.myWhite, width: 2),
+                ),
+                filled: true,
+                fillColor: AppColors.lightBlack,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 14),
+              ),
+              style: const TextStyle(
+                  color: AppColors.darkGray,
+                  fontSize: 14,
+                  fontWeight: FontWeight.normal),
             ),
             const SizedBox(height: 16),
             GestureDetector(
@@ -385,10 +494,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               child: AbsorbPointer(
                 child: Theme(
                   data: Theme.of(context).copyWith(
-                    textSelectionTheme: const TextSelectionThemeData(
-                      cursorColor: AppColors.lightBlue, // Cursor color
-                      selectionColor: AppColors.lightBlue, // Highlight color for selected text
-                      selectionHandleColor: AppColors.lightBlue, // Handle color for selection
+                    textSelectionTheme:
+                    const TextSelectionThemeData(
+                      cursorColor: AppColors.lightBlue,
+                      selectionColor: AppColors.lightBlue,
+                      selectionHandleColor: AppColors.lightBlue,
                     ),
                   ),
                   child: TextFormField(
@@ -396,24 +506,32 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                       labelText: _dob == null
                           ? "Date of Birth"
                           : "${_dob!.toLocal().toString().split(' ')[0]}",
-                      labelStyle: const TextStyle(color: AppColors.myWhite, fontSize: 14,fontWeight: FontWeight.normal),
+                      labelStyle: const TextStyle(
+                          color: AppColors.myWhite,
+                          fontSize: 14,
+                          fontWeight: FontWeight.normal),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.darkBlue, width: 1.5),
+                        borderSide: const BorderSide(
+                            color: AppColors.myWhite, width: 1.5),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.darkBlue, width: 1.5),
+                        borderSide: const BorderSide(
+                            color: AppColors.myWhite, width: 1.5),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.darkBlue, width: 2),
+                        borderSide: const BorderSide(
+                            color: AppColors.myWhite, width: 2),
                       ),
                       filled: true,
                       fillColor: AppColors.lightBlack,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 9),
                     ),
-                    style: const TextStyle(color: AppColors.myWhite, fontSize: 14),
+                    style: const TextStyle(
+                        color: AppColors.myWhite, fontSize: 14),
                   ),
                 ),
               ),
@@ -423,16 +541,23 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               value: _gender,
               label: "Gender",
               items: ["Male", "Female", "Other"],
-              onChanged: (val) { setState(() { _gender = val!; }); },
+              onChanged: (val) {
+                setState(() {
+                  _gender = val!;
+                });
+              },
               verticalPadding: 6,
             ),
             const SizedBox(height: 16),
-            // New Location Dropdown.
             buildModernDropdown(
               value: _location.isEmpty ? null : _location,
               label: "Location",
               items: ["Location 1", "Location 2", "Location 3"],
-              onChanged: (val) { setState(() { _location = val!; }); },
+              onChanged: (val) {
+                setState(() {
+                  _location = val!;
+                });
+              },
               verticalPadding: 6,
             ),
             const SizedBox(height: 16),
@@ -454,7 +579,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               value: _studentType,
               label: "Student Type",
               items: ["Board", "Cambridge"],
-              onChanged: (val) { setState(() { _studentType = val!; }); },
+              onChanged: (val) {
+                setState(() {
+                  _studentType = val!;
+                });
+              },
               verticalPadding: 6,
             ),
             const SizedBox(height: 16),
@@ -481,7 +610,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 value: _oLevelGrade,
                 label: "O-Level Grade",
                 items: ["A+", "A", "B", "C", "D"],
-                onChanged: (val) { setState(() { _oLevelGrade = val!; }); },
+                onChanged: (val) {
+                  setState(() {
+                    _oLevelGrade = val!;
+                  });
+                },
                 verticalPadding: 6,
               ),
               const SizedBox(height: 16),
@@ -489,7 +622,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 value: _aLevelGrade,
                 label: "A-Level Grade",
                 items: ["A+", "A", "B", "C", "D"],
-                onChanged: (val) { setState(() { _aLevelGrade = val!; }); },
+                onChanged: (val) {
+                  setState(() {
+                    _aLevelGrade = val!;
+                  });
+                },
                 verticalPadding: 6,
               ),
             ],
@@ -497,8 +634,19 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             buildModernDropdown(
               value: _studyStream.isEmpty ? null : _studyStream,
               label: "Study Stream",
-              items: ["Pre-Medical", "Pre-Engineering", "Computer Science", "Arts", "Commerce", "Other"],
-              onChanged: (val) { setState(() { _studyStream = val!; }); },
+              items: [
+                "Pre-Medical",
+                "Pre-Engineering",
+                "Computer Science",
+                "Arts",
+                "Commerce",
+                "Other"
+              ],
+              onChanged: (val) {
+                setState(() {
+                  _studyStream = val!;
+                });
+              },
               verticalPadding: 6,
             ),
             const SizedBox(height: 16),
@@ -510,7 +658,13 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   // Personality Section UI.
   Widget _buildPersonalitySection() {
-    final List<String> likertOptions = ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"];
+    final List<String> likertOptions = [
+      "Strongly Disagree",
+      "Disagree",
+      "Neutral",
+      "Agree",
+      "Strongly Agree"
+    ];
     return Container(
       key: _personalityKey,
       child: Padding(
@@ -520,65 +674,145 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             _buildLikertQuestion(
               "I enjoy analyzing data and identifying patterns to solve problems.",
               _p1,
-                  (val) { setState(() { _p1 = val; }); },
+                  (val) {
+                setState(() {
+                  _p1 = val;
+                });
+              },
               likertOptions,
             ),
             const SizedBox(height: 16),
             _buildLikertQuestion(
               "I prefer tasks that require logical thinking and structured solutions.",
               _p2,
-                  (val) { setState(() { _p2 = val; }); },
+                  (val) {
+                setState(() {
+                  _p2 = val;
+                });
+              },
               likertOptions,
             ),
             const SizedBox(height: 16),
             _buildLikertQuestion(
               "I can explain complex topics to others in an engaging way.",
               _p3,
-                  (val) { setState(() { _p3 = val; }); },
+                  (val) {
+                setState(() {
+                  _p3 = val;
+                });
+              },
               likertOptions,
             ),
             const SizedBox(height: 16),
             _buildLikertQuestion(
               "I enjoy brainstorming innovative ideas to solve challenges.",
               _p4,
-                  (val) { setState(() { _p4 = val; }); },
+                  (val) {
+                setState(() {
+                  _p4 = val;
+                });
+              },
               likertOptions,
             ),
             const SizedBox(height: 16),
             _buildLikertQuestion(
               "I pay close attention to details to ensure accuracy in my work.",
               _p5,
-                  (val) { setState(() { _p5 = val; }); },
+                  (val) {
+                setState(() {
+                  _p5 = val;
+                });
+              },
               likertOptions,
             ),
             const SizedBox(height: 16),
             _buildLikertQuestion(
               "I feel fulfilled when helping others overcome challenges.",
               _p6,
-                  (val) { setState(() { _p6 = val; }); },
+                  (val) {
+                setState(() {
+                  _p6 = val;
+                });
+              },
               likertOptions,
             ),
             const SizedBox(height: 16),
             _buildMultipleChoiceQuestion(
               "Which activity excites you the most?",
-              ["Analyzing data to make predictions", "Designing and building systems", "Understanding and improving human health"],
+              [
+                "Analyzing data to make predictions",
+                "Designing and building systems",
+                "Understanding and improving human health"
+              ],
               _personalityQ7,
-                  (val) { setState(() { _personalityQ7 = val; }); },
+                  (val) {
+                setState(() {
+                  _personalityQ7 = val;
+                });
+              },
             ),
             const SizedBox(height: 16),
             _buildMultipleChoiceQuestion(
               "Which type of project would you prefer?",
-              ["Developing innovative software solutions", "Researching solutions for medical issues", "Designing a new mechanical or electrical system"],
+              [
+                "Developing innovative software solutions",
+                "Researching solutions for medical issues",
+                "Designing a new mechanical or electrical system"
+              ],
               _personalityQ8,
-                  (val) { setState(() { _personalityQ8 = val; }); },
+                  (val) {
+                setState(() {
+                  _personalityQ8 = val;
+                });
+              },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 36),
+            ElevatedButton(
+              onPressed: _isFormComplete ? _saveProfile : null,
+              style: ButtonStyle(
+                backgroundColor:
+                MaterialStateProperty.resolveWith<Color>(
+                      (Set<MaterialState> states) {
+                    if (states.contains(MaterialState.disabled))
+                      return Colors.grey[600]!;
+                    return AppColors.darkBlue; // Enabled color.
+                  },
+                ),
+                padding: MaterialStateProperty.all<EdgeInsets>(
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                ),
+                shape:
+                MaterialStateProperty.all<RoundedRectangleBorder>(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                elevation:
+                MaterialStateProperty.resolveWith<double>(
+                      (Set<MaterialState> states) {
+                    if (states.contains(MaterialState.disabled))
+                      return 0;
+                    return 4;
+                  },
+                ),
+              ),
+              child: Text(
+                "Save",
+                style: TextStyle(
+                  color: _isFormComplete
+                      ? AppColors.myWhite
+                      : Colors.grey[300],
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 36),
           ],
         ),
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -593,8 +827,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               top: 70,
               left: 10,
               child: IconButton(
-                icon: SvgPicture.asset("assets/images/back.svg", color: AppColors.myWhite, height: 30),
-                onPressed: () { Navigator.pop(context); },
+                icon: SvgPicture.asset("assets/images/back.svg",
+                    color: AppColors.myWhite, height: 30),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
               ),
             ),
           ],
@@ -607,7 +844,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             top: 0,
             left: 0,
             right: 0,
-            bottom: 150, // Reserve space for the bottom container.
+            bottom: 100, // Reserve space for the bottom container.
             child: ScrollConfiguration(
               behavior: NoScrollBehavior(),
               child: SingleChildScrollView(
@@ -629,7 +866,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 42),
               decoration: const BoxDecoration(
                 color: AppColors.darkBlack,
                 borderRadius: BorderRadius.only(
@@ -642,64 +880,30 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 children: [
                   // Progress bars row.
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment:
+                    MainAxisAlignment.spaceEvenly,
                     children: [
                       InkWell(
-                        onTap: () => _scrollToSection(_getKeyForSection(0)),
-                        child: buildProgressColumn("Personal", _personalProgress, _currentSectionIndex == 0),
+                        onTap: () =>
+                            _scrollToSection(_getKeyForSection(0)),
+                        child: buildProgressColumn("Personal",
+                            _personalProgress, _currentSectionIndex == 0),
                       ),
                       InkWell(
-                        onTap: () => _scrollToSection(_getKeyForSection(1)),
-                        child: buildProgressColumn("Academic", _academicProgress, _currentSectionIndex == 1),
+                        onTap: () =>
+                            _scrollToSection(_getKeyForSection(1)),
+                        child: buildProgressColumn("Academic",
+                            _academicProgress, _currentSectionIndex == 1),
                       ),
                       InkWell(
-                        onTap: () => _scrollToSection(_getKeyForSection(2)),
-                        child: buildProgressColumn("Personality", _personalityProgress, _currentSectionIndex == 2),
+                        onTap: () =>
+                            _scrollToSection(_getKeyForSection(2)),
+                        child: buildProgressColumn("Personality",
+                            _personalityProgress,
+                            _currentSectionIndex == 2),
                       ),
                     ],
                   ),
-
-
-                  const SizedBox(height: 8),
-                  // Navigation row with text labels.
-                  // Row(
-                  //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  //   children: [
-                  //     TextButton(
-                  //       style: TextButton.styleFrom(
-                  //         backgroundColor: Colors.grey.withOpacity(0.3), // Transparent gray background.
-                  //         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  //       ),
-                  //       onPressed: _goBackward,
-                  //       child: Row(
-                  //         mainAxisSize: MainAxisSize.min,
-                  //         children: [
-                  //           SvgPicture.asset("assets/images/backward.svg", color: AppColors.myWhite, height: 20),
-                  //           const SizedBox(width: 2),
-                  //           const Text("Previous", style: TextStyle(color: AppColors.myWhite, fontSize: 14)),
-                  //         ],
-                  //       ),
-                  //     ),
-                  //     TextButton(
-                  //       style: TextButton.styleFrom(
-                  //         backgroundColor: Colors.grey.withOpacity(0.3), // Transparent gray background.
-                  //         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  //       ),
-                  //       onPressed: _goForward,
-                  //       child: Row(
-                  //         mainAxisSize: MainAxisSize.min,
-                  //         children: [
-                  //           const Text("Next", style: TextStyle(color: AppColors.myWhite, fontSize: 14)),
-                  //           const SizedBox(width: 10),
-                  //           SvgPicture.asset("assets/images/right_arrow.svg", color: AppColors.myWhite, height: 20),
-                  //         ],
-                  //       ),
-                  //     ),
-                  //   ],
-                  // ),
-
                 ],
               ),
             ),
