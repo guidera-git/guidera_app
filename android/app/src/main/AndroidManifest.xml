@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+
     <application
         android:label="guidera_app"
         android:name="${applicationName}"
@@ -42,4 +48,6 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
+
+
 </manifest>

@@ -3,10 +3,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/Widgets/fancy_nav_item.dart';
+import 'package:guidera_app/screens/profile_dashboard_screen.dart';
 import 'package:guidera_app/screens/university_search_screen.dart';
-import 'package:guidera_app/theme/app_colors.dart'; // <-- Import your color constants
+import 'package:guidera_app/theme/app_colors.dart';
 import 'dart:math' as math;
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -18,20 +18,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-
-  // final List<Widget> _screens = [
-  //   const HomeTab(), // Updated home tab with welcome card.
-  //   const UniversitySearchScreen(),
-  //   const Center(child: Text("Analytics Screen")),
-  //   const Center(child: Text("Entry Test Screen")),
-  //   const Center(child: Text("Chatbot Screen"))
-  // // Color configurations
   final List<LinearGradient> _cardGradients = [
     LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
     LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
     LinearGradient(colors: [AppColors.darkBlack, AppColors.darkBlack]),
     LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
-
   ];
 
   final List<Color> _titleCardColors = [
@@ -70,16 +61,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color backgroundColor = isDarkMode ? AppColors.myBlack : AppColors.myWhite;
+    final Color backgroundColor =
+    isDarkMode ? AppColors.myBlack : AppColors.myWhite;
 
     final List<FancyNavItem> items = [
-      FancyNavItem(label: "Home",       svgPath: "assets/images/home.svg"),
+      FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
       FancyNavItem(label: "Find", svgPath: "assets/images/search.svg"),
-      FancyNavItem(label: "Analytics",  svgPath: "assets/images/analytics.svg"),
+      FancyNavItem(label: "Analytics", svgPath: "assets/images/analytics.svg"),
       FancyNavItem(label: "Entry Test", svgPath: "assets/images/entry_test.svg"),
-      FancyNavItem(label: "Chatbot",    svgPath: "assets/images/chatbot.svg"),
-
-
+      FancyNavItem(label: "Chatbot", svgPath: "assets/images/chatbot.svg"),
     ];
 
     return Scaffold(
@@ -115,14 +105,82 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Dummy deadlines data
+    final deadlines = [
+      {"event": "FAST - Entry Test", "date": "March 25, 2025"},
+      {"event": "NUST - Application", "date": "April 05, 2025"},
+    ];
+
     return SingleChildScrollView(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          WelcomeCard(
-            userName: 'Saad Mahmood',
-            lastLogin: DateTime.now(),
+          // Greeting Section with left/right padding and clickable profile avatar
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 26.0, top: 25),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Hello, Saad!",
+                      style: TextStyle(
+                        color: AppColors.myWhite,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      "Welcome to Guidera",
+                      style: TextStyle(
+                        color: AppColors.myGray,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Wrap the profile avatar with InkWell for tap feedback and navigation
+              Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: InkWell(
+                  onTap: () {
+                    // Navigate to the UserProfileScreen when avatar is tapped
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UserProfileScreen(),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(25),
+                  child: CircleAvatar(
+                    radius: 25,
+                    backgroundColor: AppColors.darkBlue,
+                    child: Text(
+                      "S",
+                      style: TextStyle(
+                        color: AppColors.myWhite,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 24.0),
+          const SizedBox(height: 30),
+          // Info Carousel Card
+          InfoCarouselCard(
+            lastLogin: DateTime.now(),
+            deadlines: deadlines,
+          ),
+          const SizedBox(height: 16.0),
+          // Main Grid Tiles (Find University, Analytics, Prepare Test, Chatbot)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: GridView.count(
@@ -187,7 +245,8 @@ class HomeTab extends StatelessWidget {
                 top: 12,
                 left: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: titleColor,
                     borderRadius: BorderRadius.circular(16),
@@ -210,7 +269,7 @@ class HomeTab extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: colorPair['circle']!.withOpacity(0.9),
+                    color: (circleColors[index % 4])['circle']!.withOpacity(0.9),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -226,7 +285,7 @@ class HomeTab extends StatelessWidget {
                       "assets/images/back.svg",
                       width: 16,
                       height: 16,
-                      color: colorPair['icon'],
+                      color: (circleColors[index % 4])['icon'],
                     ),
                   ),
                 ),
@@ -254,24 +313,40 @@ class HomeTab extends StatelessWidget {
   }
 }
 
-class WelcomeCard extends StatelessWidget {
-  final String userName;
+/// A stateful widget for the info carousel card.
+class InfoCarouselCard extends StatefulWidget {
   final DateTime lastLogin;
+  final List<Map<String, String>> deadlines;
 
-  const WelcomeCard({
+  const InfoCarouselCard({
     Key? key,
-    required this.userName,
     required this.lastLogin,
+    required this.deadlines,
   }) : super(key: key);
 
-  String getFormattedLastLogin() {
-    return '${lastLogin.day}/${lastLogin.month}/${lastLogin.year} ${lastLogin.hour}:${lastLogin.minute.toString().padLeft(2, '0')}';
+  @override
+  State<InfoCarouselCard> createState() => _InfoCarouselCardState();
+}
+
+class _InfoCarouselCardState extends State<InfoCarouselCard> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(16.0),
+      height: 180,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -281,42 +356,129 @@ class WelcomeCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(16.0),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Hello,',
-                  style: TextStyle(
-                    fontSize: 22.0,
-                    color: AppColors.darkBlue,
-                  ),
+          // Main content: PageView with dot indicators.
+          Column(
+            children: [
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentPage = index;
+                    });
+                  },
+                  children: [
+                    // Slide 1: Last Login Info
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Last Login",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "You last logged in on ${_formatDate(widget.lastLogin)}",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: AppColors.myBlack,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Slide 2: Upcoming Deadlines
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Upcoming Deadlines",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...widget.deadlines.map((deadline) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 4.0),
+                              child: Text(
+                                "${deadline['event']}: ${deadline['date']}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.myBlack,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                    ),
+                    // Slide 3: Profile Completion (Quick Stats)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Profile Completion",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            "Your profile is 80% complete.",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppColors.myBlack,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(
+                            value: 0.8,
+                            backgroundColor: AppColors.myGray,
+                            valueColor: const AlwaysStoppedAnimation(AppColors.darkBlue),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  userName,
-                  style: TextStyle(
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.myBlack,
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-                Text(
-                  'Last login: ${getFormattedLastLogin()}',
-                  style: TextStyle(
-                    fontSize: 12.0,
-                    color: AppColors.myBlack.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SvgPicture.asset(
-            'assets/images/student_laptop.svg',
-            height: 100.0,
-            width: 80.0,
+              ),
+              const SizedBox(height: 8),
+              // Dot indicators
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(3, (index) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                    width: _currentPage == index ? 12 : 8,
+                    height: _currentPage == index ? 12 : 8,
+                    decoration: BoxDecoration(
+                      color: _currentPage == index ? AppColors.darkBlue : AppColors.myGray,
+                      shape: BoxShape.circle,
+                    ),
+                  );
+                }),
+              ),
+            ],
           ),
         ],
       ),
