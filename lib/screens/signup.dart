@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import '../Widgets/header.dart';
+import 'login-signup.dart';
+import 'login.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);
@@ -57,7 +59,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   height: 30,
                 ),
                 onPressed: () {
-                  Navigator.pop(context);
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    // Fallback: navigate to a default screen (e.g., HomeScreen)
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginSignup()),
+                    );
+                  }
                 },
               ),
             ),
@@ -241,6 +251,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   TextButton(
                     onPressed: () {
                       // TODO: Navigate to the Login screen
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      );
                     },
                     child: Text(
                       "Log in",

@@ -6,6 +6,8 @@ import 'package:guidera_app/theme/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import 'login-signup.dart';
+
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({Key? key}) : super(key: key);
@@ -295,6 +297,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ),
                       onPressed: () {
                         // TODO: Implement logout logic
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (context) => const LoginSignup()),
+                        );
                       },
                     ),
                   ),

@@ -5,6 +5,9 @@ import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/Widgets/fancy_nav_item.dart';
 import 'package:guidera_app/screens/profile_dashboard_screen.dart';
 import 'package:guidera_app/screens/university_search_screen.dart';
+import 'package:guidera_app/screens/analytics_screen.dart';
+//import 'package:guidera_app/screens/entry_test.dart';
+import 'package:guidera_app/screens/chatbot_screen.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'dart:math' as math;
 
@@ -46,23 +49,23 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _screens = [
       HomeTab(
-        onGridItemSelected: (index) => setState(() => _currentIndex = index),
+        onGridItemSelected: (gridIndex) =>
+            setState(() => _currentIndex = gridIndex + 1),
         cardGradients: _cardGradients,
         titleCardColors: _titleCardColors,
         circleColors: _circleColors,
       ),
       const UniversitySearchScreen(),
-      const Center(child: Text("Analytics Screen")),
-      const Center(child: Text("Entry Test Screen")),
-      const Center(child: Text("Chatbot Screen")),
+      const AnalyticsTrackingScreen(),
+      const AnalyticsTrackingScreen(),
+      const ChatbotScreen(),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color backgroundColor =
-    isDarkMode ? AppColors.myBlack : AppColors.myWhite;
+    final Color backgroundColor = isDarkMode ? AppColors.myBlack : AppColors.myWhite;
 
     final List<FancyNavItem> items = [
       FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
@@ -74,12 +77,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: Column(
+      body: _currentIndex == 0
+          ? Column(
         children: [
-          const GuideraHeader(),
+          const GuideraHeader(),  // Only show the global header for Home
           Expanded(child: _screens[_currentIndex]),
         ],
-      ),
+      )
+          : _screens[_currentIndex],  // Other screens manage their own header
       bottomNavigationBar: GuideraBottomNavBar(
         items: items,
         initialIndex: _currentIndex,
@@ -143,7 +148,7 @@ class HomeTab extends StatelessWidget {
                   ],
                 ),
               ),
-              // Wrap the profile avatar with InkWell for tap feedback and navigation
+              // Profile avatar using NetworkImage instead of "S"
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: InkWell(
@@ -159,15 +164,9 @@ class HomeTab extends StatelessWidget {
                   borderRadius: BorderRadius.circular(25),
                   child: CircleAvatar(
                     radius: 25,
+                    backgroundImage: NetworkImage(
+                        "https://avatars.githubusercontent.com/u/168419532?v=4"),
                     backgroundColor: AppColors.darkBlue,
-                    child: Text(
-                      "S",
-                      style: TextStyle(
-                        color: AppColors.myWhite,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -269,7 +268,8 @@ class HomeTab extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: (circleColors[index % 4])['circle']!.withOpacity(0.9),
+                    color: circleColors[index % 4]['circle']!
+                        .withOpacity(0.9),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -285,7 +285,7 @@ class HomeTab extends StatelessWidget {
                       "assets/images/back.svg",
                       width: 16,
                       height: 16,
-                      color: (circleColors[index % 4])['icon'],
+                      color: circleColors[index % 4]['icon'],
                     ),
                   ),
                 ),

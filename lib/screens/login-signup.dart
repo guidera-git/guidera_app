@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:guidera_app/screens/home_screen.dart';
+import 'package:guidera_app/screens/login.dart';
+import 'package:guidera_app/screens/signup.dart';
 
 import 'package:guidera_app/theme/app_colors.dart';
 import '../Widgets/header.dart';
@@ -96,40 +99,11 @@ class _LoginSignupState extends State<LoginSignup> {
       // 1) GuideraHeader app bar with back/home icons
       // ---------------------------------------------------
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120),
+        preferredSize: const Size.fromHeight(140),
         child: Stack(
           children: [
             const GuideraHeader(),
-            // Top-left: Back button
-            Positioned(
-              top: 70,
-              left: 10,
-              child: IconButton(
-                icon: SvgPicture.asset(
-                  "assets/images/back.svg",
-                  color: AppColors.myWhite,
-                  height: 30,
-                ),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-            // Top-right: Home button
-            Positioned(
-              top: 70,
-              right: 20,
-              child: IconButton(
-                icon: SvgPicture.asset(
-                  "assets/images/home.svg",
-                  color: AppColors.myWhite,
-                  height: 30,
-                ),
-                onPressed: () {
-                  // TODO: Implement home navigation logic
-                },
-              ),
-            ),
+
           ],
         ),
       ),
@@ -234,6 +208,9 @@ class _LoginSignupState extends State<LoginSignup> {
                       ),
                       onPressed: () {
                         // TODO: Sign up logic
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (context) => const SignUpScreen()),
+                        );
                       },
                       child: const Text(
                         'Sign up',
@@ -266,6 +243,9 @@ class _LoginSignupState extends State<LoginSignup> {
                       ),
                       onPressed: () {
                         // TODO: Login logic
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                        );
                       },
                       child: const Text(
                         'Log in',
