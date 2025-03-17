@@ -73,7 +73,7 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
   /// Builds a single analytics card.
   Widget _buildAnalyticsCard(BuildContext context, Map<String, dynamic> data) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 15),
       padding: const EdgeInsets.all(16),
       width: MediaQuery.of(context).size.width * 0.88,
       height: 230,
@@ -240,7 +240,7 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
             onTap: () => setState(() => _activeFilter = filter),
             child: Container(
               margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               decoration: BoxDecoration(
                 color: isActive ? AppColors.darkBlue : AppColors.lightGray,
                 borderRadius: BorderRadius.circular(20),
@@ -453,14 +453,14 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
             ),
             // "Analytics & Tracking" title.
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
                   "Analytics & Tracking",
                   style: TextStyle(
                     color: AppColors.myWhite,
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
