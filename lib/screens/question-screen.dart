@@ -3,8 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:guidera_app/theme/app_colors.dart';
+import 'package:guidera_app/screens/result-screen.dart';
 import 'dart:async';
-import 'package:flutter/material.dart';
+
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart'; // <-- Import your color constants
 import 'dart:math' as math;
@@ -362,6 +363,32 @@ class QuestionProvider extends ChangeNotifier {
       notifyListeners();
     });
   }
+  int calculateTotalScore() {
+    int totalScore = 0;
+    for (var question in questions) {
+      if (question.selectedOption == question.correctAnswer) {
+        totalScore++;
+      }
+    }
+    return totalScore;
+  }
+
+  String calculateGrade(int totalScore) {
+    double percentage = (totalScore / questions.length) * 100;
+    if (percentage >= 90) {
+      return 'A';
+    } else if (percentage >= 80) {
+      return 'B';
+    } else if (percentage >= 70) {
+      return 'C';
+    } else if (percentage >= 60) {
+      return 'D';
+    } else {
+      return 'F';
+    }
+  }
+
+
 
   void _startTimer() {
     const oneSec = Duration(seconds: 1);
@@ -545,10 +572,21 @@ class _QuestionScreenState extends State<QuestionScreen> {
                             ElevatedButton(
                               onPressed: isSubmitEnabled
                                   ? () {
-                                      // Submit logic
-                                    }
-                                  : null,
-                              child: Text('Submit'),
+                                int totalScore = provider.calculateTotalScore();
+                                String grade = provider.calculateGrade(totalScore);
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ResultScreen(
+                                      totalScore: totalScore,
+                                      grade: grade,
+                                      subjectName: widget.subjectName,
+                                    ),
+                                  ),
+                                );
+                              }
+                                  : null,                              child: Text('Submit'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.lightBlue,
                                 elevation: 4,
