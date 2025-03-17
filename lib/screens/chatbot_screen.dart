@@ -265,29 +265,25 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   ),
                 ),
                 Positioned(
-                  right: 10,
-                  top: 75,
-                  child: GestureDetector(
+                  left: 339,
+                  top: 70,
+                  //padding: const EdgeInsets.only(right: 16.0),
+                  child: InkWell(
                     onTap: () {
-                      // Navigate to your Profile Dashboard screen.
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const UserProfileScreen(),
+                          builder: (context) => const UserProfileScreen(),
                         ),
                       );
                     },
+                    borderRadius: BorderRadius.circular(25),
                     child: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: AppColors.myWhite, // White background.
-                      child: const Text(
-                        "S", // Initial letter; update with actual user's initial if available.
-                        style: TextStyle(
-                          fontSize: 23,
-                          color: AppColors.darkBlue,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      radius: 25,
+                      backgroundImage: NetworkImage(
+                          "https://avatars.githubusercontent.com/u/168419532?v=4"
                       ),
+                      backgroundColor: AppColors.darkBlue,
                     ),
                   ),
                 ),

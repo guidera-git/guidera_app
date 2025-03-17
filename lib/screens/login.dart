@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
+import 'package:guidera_app/screens/home_screen.dart';
+import 'package:guidera_app/screens/signup.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import '../Widgets/header.dart';
+import 'login-signup.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -14,13 +16,13 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers for the input fields
+  // Controllers for the input fields.
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
-    // Dispose controllers when the widget is removed
+    // Dispose controllers when the widget is removed.
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -28,17 +30,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login() {
     if (_formKey.currentState!.validate()) {
-      // TODO: Implement your login logic here
+      // TODO: Add your authentication logic here.
+      // If login is successful, navigate to the HomeScreen.
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
       backgroundColor: AppColors.myBlack,
-      // Custom AppBar using GuideraHeader with a back button
+      // Custom AppBar using GuideraHeader with a back button.
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Stack(
@@ -54,7 +58,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 30,
                 ),
                 onPressed: () {
-                  Navigator.pop(context);
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    // Fallback: navigate to a default screen (e.g., HomeScreen)
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginSignup()),
+                    );
+                  }
                 },
               ),
             ),
@@ -63,11 +75,11 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30),
+          padding:
+          const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Welcome Header Text
               const SizedBox(height: 20),
               Text(
                 "Welcome Back",
@@ -86,22 +98,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-              // Login Form
+              // Login Form.
               Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Email Field
+                    // Email Field.
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       style: const TextStyle(color: AppColors.myWhite),
                       decoration: InputDecoration(
                         hintText: "Email",
-                        hintStyle: const TextStyle(color: AppColors.myGray),
+                        hintStyle:
+                        const TextStyle(color: AppColors.myGray),
                         filled: true,
                         fillColor: AppColors.lightBlack,
-                        prefixIcon: const Icon(Icons.email, color: AppColors.myWhite),
+                        prefixIcon: const Icon(Icons.email,
+                            color: AppColors.myWhite),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide.none,
@@ -111,22 +125,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (value == null || value.isEmpty) {
                           return "Please enter your email";
                         }
-                        // Add more validation if needed
+                        // Optionally, add email format validation here.
                         return null;
                       },
                     ),
                     const SizedBox(height: 20),
-                    // Password Field
+                    // Password Field.
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
                       style: const TextStyle(color: AppColors.myWhite),
                       decoration: InputDecoration(
                         hintText: "Password",
-                        hintStyle: const TextStyle(color: AppColors.myGray),
+                        hintStyle:
+                        const TextStyle(color: AppColors.myGray),
                         filled: true,
                         fillColor: AppColors.lightBlack,
-                        prefixIcon: const Icon(Icons.lock, color: AppColors.myWhite),
+                        prefixIcon: const Icon(Icons.lock,
+                            color: AppColors.myWhite),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide.none,
@@ -140,12 +156,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     const SizedBox(height: 10),
-                    // Forgot Password Link
+                    // Forgot Password Link.
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          // TODO: Implement forgot password logic
+                          // TODO: Implement forgot password logic.
                         },
                         child: const Text(
                           "Forgot Password?",
@@ -154,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 30),
-                    // Login Button with modern rounded design and subtle elevation
+                    // Login Button.
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -181,17 +197,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-              // Sign up prompt at the bottom
+              // Sign up prompt.
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     "Don't have an account?",
-                    style: TextStyle(color: AppColors.myGray, fontSize: 16),
+                    style: TextStyle(
+                        color: AppColors.myGray, fontSize: 16),
                   ),
                   TextButton(
                     onPressed: () {
-                      // TODO: Navigate to the Sign Up screen
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                            builder: (context) =>
+                            const SignUpScreen()),
+                      );
                     },
                     child: Text(
                       "Sign Up",

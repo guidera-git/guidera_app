@@ -5,9 +5,14 @@ import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/Widgets/fancy_nav_item.dart';
 import 'package:guidera_app/screens/profile_dashboard_screen.dart';
 import 'package:guidera_app/screens/university_search_screen.dart';
+import 'package:guidera_app/screens/analytics_screen.dart';
+import 'package:guidera_app/screens/chatbot_screen.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'dart:math' as math;
+import 'package:guidera_app/screens/entrytest-screen.dart';
+import 'package:guidera_app/screens/notification_screen.dart'; // NEW: Notification screen
 
+/// HomeScreen now loads its header only for the Home tab.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -18,6 +23,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
+  // Colors and gradients used by the grid tiles on the Home dashboard.
   final List<LinearGradient> _cardGradients = [
     LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
     LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
@@ -44,60 +50,71 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Updated _screens with an additional NotificationScreen.
     _screens = [
       HomeTab(
-        onGridItemSelected: (index) => setState(() => _currentIndex = index),
         cardGradients: _cardGradients,
         titleCardColors: _titleCardColors,
         circleColors: _circleColors,
       ),
-      const UniversitySearchScreen(),
-      const Center(child: Text("Analytics Screen")),
-      const Center(child: Text("Entry Test Screen")),
-      const Center(child: Text("Chatbot Screen")),
+      const UniversitySearchScreen(), // Ensure this screen has its own header within its layout.
+      const UserProfileScreen(),        // Likewise, include your profile header inside this screen.
+      const NotificationScreen(),       // NEW: Notification tab screen with its own header.
     ];
   }
 
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color backgroundColor =
-    isDarkMode ? AppColors.myBlack : AppColors.myWhite;
+    final Color backgroundColor = isDarkMode ? AppColors.myBlack : AppColors.myWhite;
 
+    // Updated navigation items to include Notification tab.
     final List<FancyNavItem> items = [
       FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
-      FancyNavItem(label: "Find", svgPath: "assets/images/search.svg"),
-      FancyNavItem(label: "Analytics", svgPath: "assets/images/analytics.svg"),
-      FancyNavItem(label: "Entry Test", svgPath: "assets/images/entry_test.svg"),
-      FancyNavItem(label: "Chatbot", svgPath: "assets/images/chatbot.svg"),
+      FancyNavItem(label: "Search", svgPath: "assets/images/search.svg"),
+      FancyNavItem(label: "Profile", svgPath: "assets/images/profile.svg"),
+      FancyNavItem(label: "Notifications", svgPath: "assets/images/notification.svg"),
     ];
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Column(
-        children: [
-          const GuideraHeader(),
-          Expanded(child: _screens[_currentIndex]),
-        ],
-      ),
-      bottomNavigationBar: GuideraBottomNavBar(
-        items: items,
-        initialIndex: _currentIndex,
-        onItemSelected: (index) => setState(() => _currentIndex = index),
+    return WillPopScope(
+      onWillPop: () async {
+        // If the user is not on Home, back returns to Home instead of exiting the app.
+        if (_currentIndex != 0) {
+          setState(() {
+            _currentIndex = 0;
+          });
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.myBlack,
+        // Only load header for Home tab. Other tabs should render their own header inside their screen.
+        appBar: _currentIndex == 0
+            ? PreferredSize(
+          preferredSize: const Size.fromHeight(120),
+          child: const GuideraHeader(),
+        )
+            : null,
+        body: _screens[_currentIndex],
+        bottomNavigationBar: GuideraBottomNavBar(
+          items: items,
+          initialIndex: _currentIndex,
+          onItemSelected: (index) => setState(() => _currentIndex = index),
+        ),
       ),
     );
   }
 }
 
+/// HomeTab remains as your dashboard for the Home screen.
 class HomeTab extends StatelessWidget {
-  final Function(int) onGridItemSelected;
   final List<LinearGradient> cardGradients;
   final List<Color> titleCardColors;
   final List<Map<String, Color>> circleColors;
 
   const HomeTab({
     Key? key,
-    required this.onGridItemSelected,
     required this.cardGradients,
     required this.titleCardColors,
     required this.circleColors,
@@ -105,7 +122,7 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Dummy deadlines data
+    // Dummy deadlines data for demonstration.
     final deadlines = [
       {"event": "FAST - Entry Test", "date": "March 25, 2025"},
       {"event": "NUST - Application", "date": "April 05, 2025"},
@@ -115,7 +132,7 @@ class HomeTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting Section with left/right padding and clickable profile avatar
+          // Greeting section with a profile avatar.
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -143,12 +160,11 @@ class HomeTab extends StatelessWidget {
                   ],
                 ),
               ),
-              // Wrap the profile avatar with InkWell for tap feedback and navigation
+              // The profile avatar also allows navigation to the profile screen.
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: InkWell(
                   onTap: () {
-                    // Navigate to the UserProfileScreen when avatar is tapped
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -159,28 +175,23 @@ class HomeTab extends StatelessWidget {
                   borderRadius: BorderRadius.circular(25),
                   child: CircleAvatar(
                     radius: 25,
-                    backgroundColor: AppColors.darkBlue,
-                    child: Text(
-                      "S",
-                      style: TextStyle(
-                        color: AppColors.myWhite,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    backgroundImage: NetworkImage(
+                        "https://avatars.githubusercontent.com/u/168419532?v=4"
                     ),
+                    backgroundColor: AppColors.darkBlue,
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 30),
-          // Info Carousel Card
+          // Info carousel card shows dynamic info like last login and deadlines.
           InfoCarouselCard(
             lastLogin: DateTime.now(),
             deadlines: deadlines,
           ),
           const SizedBox(height: 16.0),
-          // Main Grid Tiles (Find University, Analytics, Prepare Test, Chatbot)
+          // Main Grid Tiles: tapping each tile pushes its respective screen.
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: GridView.count(
@@ -191,10 +202,10 @@ class HomeTab extends StatelessWidget {
               mainAxisSpacing: 16.0,
               childAspectRatio: 1.2,
               children: [
-                _buildGridCard("Find University", "assets/images/find.svg", 0),
-                _buildGridCard("Analytics", "assets/images/visual.svg", 1),
-                _buildGridCard("Prepare Test", "assets/images/test.svg", 2),
-                _buildGridCard("Chatbot", "assets/images/chat.svg", 3),
+                _buildGridCard(context, "Find University", "assets/images/find.svg", 0),
+                _buildGridCard(context, "Analytics", "assets/images/visual.svg", 1),
+                _buildGridCard(context, "Prepare Test", "assets/images/test.svg", 2),
+                _buildGridCard(context, "Chatbot", "assets/images/chat.svg", 3),
               ],
             ),
           ),
@@ -215,10 +226,9 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildGridCard(String title, String iconPath, int index) {
-    final colorPair = circleColors[index % 4];
-    final gradient = cardGradients[index % 4];
-    final titleColor = titleCardColors[index % 4];
+  Widget _buildGridCard(BuildContext context, String title, String iconPath, int index) {
+    final gradient = cardGradients[index % cardGradients.length];
+    final titleColor = titleCardColors[index % titleCardColors.length];
 
     return Material(
       color: Colors.transparent,
@@ -237,16 +247,51 @@ class HomeTab extends StatelessWidget {
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(16.0),
-          onTap: () => onGridItemSelected(index),
+          onTap: () {
+            // Based on the tile tapped, push the corresponding screen.
+            switch (index) {
+              case 0:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UniversitySearchScreen(),
+                  ),
+                );
+                break;
+              case 1:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AnalyticsTrackingScreen(),
+                  ),
+                );
+                break;
+              case 2:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EntryTestScreen(subjectName: ""),
+                  ),
+                );
+                break;
+              case 3:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ChatbotScreen(),
+                  ),
+                );
+                break;
+            }
+          },
           child: Stack(
             children: [
-              // Title Card (top-left)
+              // Title card at the top-left.
               Positioned(
                 top: 12,
                 left: 12,
                 child: Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: titleColor,
                     borderRadius: BorderRadius.circular(16),
@@ -261,7 +306,7 @@ class HomeTab extends StatelessWidget {
                   ),
                 ),
               ),
-              // Circular Button (bottom-left)
+              // Circular button at the bottom-left.
               Positioned(
                 bottom: 12,
                 left: 12,
@@ -269,7 +314,8 @@ class HomeTab extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: (circleColors[index % 4])['circle']!.withOpacity(0.9),
+                    color: circleColors[index % circleColors.length]['circle']!
+                        .withOpacity(0.9),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -285,12 +331,12 @@ class HomeTab extends StatelessWidget {
                       "assets/images/back.svg",
                       width: 16,
                       height: 16,
-                      color: (circleColors[index % 4])['icon'],
+                      color: circleColors[index % circleColors.length]['icon'],
                     ),
                   ),
                 ),
               ),
-              // Main Icon (bottom-right)
+              // Main icon at the bottom-right.
               Positioned(
                 bottom: 12,
                 right: 12,
@@ -313,7 +359,7 @@ class HomeTab extends StatelessWidget {
   }
 }
 
-/// A stateful widget for the info carousel card.
+/// InfoCarouselCard shows dynamic information such as last login time and deadlines.
 class InfoCarouselCard extends StatefulWidget {
   final DateTime lastLogin;
   final List<Map<String, String>> deadlines;
@@ -358,7 +404,7 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
       ),
       child: Stack(
         children: [
-          // Main content: PageView with dot indicators.
+          // A PageView for the different info slides.
           Column(
             children: [
               Expanded(
@@ -370,7 +416,7 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                     });
                   },
                   children: [
-                    // Slide 1: Last Login Info
+                    // Slide 1: Last Login Info.
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
@@ -396,7 +442,7 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                         ],
                       ),
                     ),
-                    // Slide 2: Upcoming Deadlines
+                    // Slide 2: Upcoming Deadlines.
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
@@ -427,7 +473,7 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                         ],
                       ),
                     ),
-                    // Slide 3: Profile Completion (Quick Stats)
+                    // Slide 3: Profile Completion (Quick Stats).
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
@@ -463,7 +509,7 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Dot indicators
+              // Dot indicators for the carousel.
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(3, (index) {
