@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import 'package:guidera_app/screens/entrytest-screen.dart';
+
 import 'package:guidera_app/screens/chatbot_screen.dart';
 import 'package:guidera_app/screens/home_screen.dart';
 import 'package:guidera_app/screens/login-signup.dart';
@@ -26,7 +29,8 @@ class GuideraApp extends StatelessWidget {
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: ThemeMode.system, // Auto-switch between light/dark mode
-      home: const ChatbotScreen(),
+      home: const EntryTestScreen(subjectName: ""),
+
     );
   }
 }
