@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 
 import 'package:guidera_app/screens/home_screen.dart';
+import 'package:guidera_app/screens/login-signup.dart';
 import 'package:guidera_app/theme/app_colors.dart'; // <-- Import your custom colors
 
 class SplashScreen extends StatefulWidget {
@@ -63,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     //Navigate to Home after 3 seconds
     Timer(const Duration(seconds: 5), () {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const LoginSignup()),
       );
     });
   }

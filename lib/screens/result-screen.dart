@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:guidera_app/theme/app_colors.dart';
-import 'package:guidera_app/Widgets/header.dart'; // Import GuideraHeader
-import 'package:flutter_svg/flutter_svg.dart'; // For using SVG images
-import 'package:shared_preferences/shared_preferences.dart'; // For 24-hour cooldown
+import 'package:guidera_app/Widgets/header.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/animation.dart';
+import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
+import 'package:guidera_app/Widgets/fancy_nav_item.dart';
+import 'entrytest-screen.dart';
 
-class ResultScreen extends StatelessWidget {
+class ResultScreen extends StatefulWidget {
   final int totalScore;
   final String grade;
   final String subjectName;
@@ -16,28 +20,61 @@ class ResultScreen extends StatelessWidget {
     required this.subjectName,
   }) : super(key: key);
 
-  // Check if the user can retake the test
+  @override
+  _ResultScreenState createState() => _ResultScreenState();
+}
+
+class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  int _currentIndex = 0;
+
+  final List<FancyNavItem> items = [
+    FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
+    FancyNavItem(label: "Search", svgPath: "assets/images/search.svg"),
+    FancyNavItem(label: "Profile", svgPath: "assets/images/profile.svg"),
+    FancyNavItem(label: "Notifications", svgPath: "assets/images/notification.svg"),
+  ];
+
   Future<bool> canRetakeTest() async {
     final prefs = await SharedPreferences.getInstance();
     final lastRetakeTimestamp = prefs.getInt('lastRetakeTimestamp') ?? 0;
     final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
-    final cooldownDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-
+    final cooldownDuration = 24 * 60 * 60 * 1000;
     return (currentTimestamp - lastRetakeTimestamp) >= cooldownDuration;
   }
 
-  // Set the retake timestamp
   Future<void> setRetakeTimestamp() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('lastRetakeTimestamp', DateTime.now().millisecondsSinceEpoch);
   }
 
   @override
-  Widget build(BuildContext context) {
-    // Calculate percentage
-    double percentage = (totalScore / 10) * 100; // Assuming 10 questions
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: 4),
+    );
 
-    // Feedback based on grade
+    _animation = Tween<double>(begin: 0, end: 1).animate(_controller)
+      ..addListener(() {
+        setState(() {});
+      });
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    double percentage = (widget.totalScore / 10) * 100;
+
     String feedback;
     String suggestion;
     if (percentage >= 90) {
@@ -56,158 +93,164 @@ class ResultScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBlack,
-      body: Column(
+      body: Stack(
         children: [
-          // Guidera Header at the top
           const GuideraHeader(),
-
-          // Beautiful Interactive Card for Score and Grade
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
-            child: Card(
-              elevation: 10,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+          Positioned(
+            top: 85,
+            left: 25,
+            child: Transform.rotate(
+              angle: 0.0,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EntryTestScreen(subjectName: ""),
+                    ),
+                  );
+                },
+                child: SvgPicture.asset(
+                  "assets/images/back.svg",
+                  height: 30,
+                  colorFilter: ColorFilter.mode(
+                    AppColors.myWhite,
+                    BlendMode.srcIn,
+                  ),
+                ),
               ),
-              color: AppColors.lightBlack,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
-                    // Score and Grade Details
-                    Expanded(
+            ),
+          ),
+          Positioned(
+            top: 74,
+            right: 25,
+            child: CircleAvatar(
+              radius: 21,
+              backgroundImage: NetworkImage(
+                  "https://avatars.githubusercontent.com/u/168419532?v=4"),
+              backgroundColor: AppColors.darkBlue,
+            ),
+          ),
+          SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Subject Name Header
+                Padding(
+                  padding: const EdgeInsets.only(top: 170, left: 35, right: 20),
+                  child: Text(
+                    'Result: ${widget.subjectName}',
+                    style: TextStyle(
+                      color: AppColors.myWhite,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+
+                // Existing Card
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, left: 20, right: 20),
+                  child: Card(
+                    elevation: 10,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    color: AppColors.myWhite,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Subject: $subjectName',
+                            "Hello, Saad!",
                             style: TextStyle(
-                              color: AppColors.myWhite,
-                              fontSize: 20,
+                              color: AppColors.myBlack,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           SizedBox(height: 10),
                           Text(
-                            'Score: $totalScore/10',
+                            'Score: ${widget.totalScore}/10',
                             style: TextStyle(
-                              color: AppColors.myWhite,
+                              color: AppColors.myBlack,
                               fontSize: 18,
                             ),
                           ),
                           SizedBox(height: 10),
                           Text(
-                            'Grade: $grade ($percentage%)',
+                            'Grade: ${widget.grade} (${percentage.toStringAsFixed(1)}%)',
                             style: TextStyle(
-                              color: AppColors.myWhite,
+                              color: AppColors.myBlack,
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'Remarks: $feedback',
+                            style: TextStyle(
+                              color: AppColors.myBlack,
+                              fontSize: 16,
+                              fontStyle: FontStyle.italic,
                             ),
                           ),
                         ],
                       ),
                     ),
-
-                    // Celebration SVG on the right
-                    SvgPicture.asset(
-                      "assets/images/celebrate.svg", // Add your SVG image
-                      height: 80,
-                      colorFilter: ColorFilter.mode(
-                        AppColors.lightBlue,
-                        BlendMode.srcIn,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ),
 
-          // Feedback and Suggestions
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Column(
-                  children: [
-                    // Feedback
-                    Text(
-                      feedback,
-                      style: TextStyle(
-                        color: AppColors.myWhite,
-                        fontSize: 18,
+                // Progress Circle
+                Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 200,
+                        height: 330,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.lightBlue.withOpacity(0.3),
+                            width: 2,
+                          ),
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 20),
-
-                    // Suggestion for Improvement
-                    Text(
-                      suggestion,
-                      style: TextStyle(
-                        color: AppColors.myWhite,
-                        fontSize: 16,
-                        fontStyle: FontStyle.italic,
+                      SizedBox(
+                        width: 210,
+                        height: 210,
+                        child: CircularProgressIndicator(
+                          value: _animation.value,
+                          strokeWidth: 5,
+                          color: AppColors.lightBlue,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 30),
-
-                    // Retake Button (Conditional)
-
-                      FutureBuilder<bool>(
-                        future: canRetakeTest(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return CircularProgressIndicator(); // Show loading while checking cooldown
-                          } else if (snapshot.hasData && snapshot.data!) {
-                            return ElevatedButton(
-                              onPressed: () async {
-                                await setRetakeTimestamp(); // Set the retake timestamp
-                                Navigator.pop(context); // Navigate back to retake the test
-                              },
-                              child: Text('Retake Test'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.lightBlue,
-                                elevation: 4,
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 10),
-                              ),
-                            );
-                          } else {
-                            return Text(
-                              'You can retake the test after 24 hours.',
-                              style: TextStyle(
-                                color: AppColors.myWhite,
-                                fontSize: 16,
-                              ),
-                            );
-                          }
-                        },
+                      Text(
+                        percentage >= 70
+                            ? 'Congratulations\nPassed!'
+                            : 'Failed',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.myWhite,
+                          fontSize: 21,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    SizedBox(height: 20),
-
-                    // Go to Next Item Button
-                    ElevatedButton(
-                      onPressed: () {
-                        // Navigate to the next item or screen
-                        Navigator.pop(context);
-                      },
-                      child: Text('Go to Next Item'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.lightBlue,
-                        elevation: 4,
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ],
+      ),
+      bottomNavigationBar: GuideraBottomNavBar(
+        items: items,
+        initialIndex: _currentIndex,
+        onItemSelected: (index) => setState(() => _currentIndex = index),
       ),
     );
   }

@@ -3,11 +3,16 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/Widgets/fancy_nav_item.dart';
+import 'package:guidera_app/screens/profile_dashboard_screen.dart';
 import 'package:guidera_app/screens/university_search_screen.dart';
-import 'package:guidera_app/theme/app_colors.dart'; // <-- Import your color constants
+import 'package:guidera_app/screens/analytics_screen.dart';
+import 'package:guidera_app/screens/chatbot_screen.dart';
+import 'package:guidera_app/theme/app_colors.dart';
 import 'dart:math' as math;
+import 'package:guidera_app/screens/entrytest-screen.dart';
+import 'package:guidera_app/screens/notification_screen.dart'; // NEW: Notification screen
 
-
+/// HomeScreen now loads its header only for the Home tab.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -18,20 +23,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
-
-  // final List<Widget> _screens = [
-  //   const HomeTab(), // Updated home tab with welcome card.
-  //   const UniversitySearchScreen(),
-  //   const Center(child: Text("Analytics Screen")),
-  //   const Center(child: Text("Entry Test Screen")),
-  //   const Center(child: Text("Chatbot Screen"))
-  // // Color configurations
+  // Colors and gradients used by the grid tiles on the Home dashboard.
   final List<LinearGradient> _cardGradients = [
     LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
     LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
     LinearGradient(colors: [AppColors.darkBlack, AppColors.darkBlack]),
     LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
-
   ];
 
   final List<Color> _titleCardColors = [
@@ -53,17 +50,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Updated _screens with an additional NotificationScreen.
     _screens = [
       HomeTab(
-        onGridItemSelected: (index) => setState(() => _currentIndex = index),
         cardGradients: _cardGradients,
         titleCardColors: _titleCardColors,
         circleColors: _circleColors,
       ),
-      const UniversitySearchScreen(),
-      const Center(child: Text("Analytics Screen")),
-      const Center(child: Text("Entry Test Screen")),
-      const Center(child: Text("Chatbot Screen")),
+      const UniversitySearchScreen(), // Ensure this screen has its own header within its layout.
+      const UserProfileScreen(),        // Likewise, include your profile header inside this screen.
+      const NotificationScreen(),       // NEW: Notification tab screen with its own header.
     ];
   }
 
@@ -72,42 +68,53 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color backgroundColor = isDarkMode ? AppColors.myBlack : AppColors.myWhite;
 
+    // Updated navigation items to include Notification tab.
     final List<FancyNavItem> items = [
-      FancyNavItem(label: "Home",       svgPath: "assets/images/home.svg"),
-      FancyNavItem(label: "Find", svgPath: "assets/images/search.svg"),
-      FancyNavItem(label: "Analytics",  svgPath: "assets/images/analytics.svg"),
-      FancyNavItem(label: "Entry Test", svgPath: "assets/images/entry_test.svg"),
-      FancyNavItem(label: "Chatbot",    svgPath: "assets/images/chatbot.svg"),
-
-
+      FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
+      FancyNavItem(label: "Search", svgPath: "assets/images/search.svg"),
+      FancyNavItem(label: "Profile", svgPath: "assets/images/profile.svg"),
+      FancyNavItem(label: "Notifications", svgPath: "assets/images/notification.svg"),
     ];
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Column(
-        children: [
-          const GuideraHeader(),
-          Expanded(child: _screens[_currentIndex]),
-        ],
-      ),
-      bottomNavigationBar: GuideraBottomNavBar(
-        items: items,
-        initialIndex: _currentIndex,
-        onItemSelected: (index) => setState(() => _currentIndex = index),
+    return WillPopScope(
+      onWillPop: () async {
+        // If the user is not on Home, back returns to Home instead of exiting the app.
+        if (_currentIndex != 0) {
+          setState(() {
+            _currentIndex = 0;
+          });
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.myBlack,
+        // Only load header for Home tab. Other tabs should render their own header inside their screen.
+        appBar: _currentIndex == 0
+            ? PreferredSize(
+          preferredSize: const Size.fromHeight(120),
+          child: const GuideraHeader(),
+        )
+            : null,
+        body: _screens[_currentIndex],
+        bottomNavigationBar: GuideraBottomNavBar(
+          items: items,
+          initialIndex: _currentIndex,
+          onItemSelected: (index) => setState(() => _currentIndex = index),
+        ),
       ),
     );
   }
 }
 
+/// HomeTab remains as your dashboard for the Home screen.
 class HomeTab extends StatelessWidget {
-  final Function(int) onGridItemSelected;
   final List<LinearGradient> cardGradients;
   final List<Color> titleCardColors;
   final List<Map<String, Color>> circleColors;
 
   const HomeTab({
     Key? key,
-    required this.onGridItemSelected,
     required this.cardGradients,
     required this.titleCardColors,
     required this.circleColors,
@@ -115,14 +122,76 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Dummy deadlines data for demonstration.
+    final deadlines = [
+      {"event": "FAST - Entry Test", "date": "March 25, 2025"},
+      {"event": "NUST - Application", "date": "April 05, 2025"},
+    ];
+
     return SingleChildScrollView(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          WelcomeCard(
-            userName: 'Saad Mahmood',
-            lastLogin: DateTime.now(),
+          // Greeting section with a profile avatar.
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 26.0, top: 25),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Hello, Saad!",
+                      style: TextStyle(
+                        color: AppColors.myWhite,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      "Welcome to Guidera",
+                      style: TextStyle(
+                        color: AppColors.myGray,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // The profile avatar also allows navigation to the profile screen.
+              Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const UserProfileScreen(),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(25),
+                  child: CircleAvatar(
+                    radius: 25,
+                    backgroundImage: NetworkImage(
+                        "https://avatars.githubusercontent.com/u/168419532?v=4"
+                    ),
+                    backgroundColor: AppColors.darkBlue,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 24.0),
+          const SizedBox(height: 30),
+          // Info carousel card shows dynamic info like last login and deadlines.
+          InfoCarouselCard(
+            lastLogin: DateTime.now(),
+            deadlines: deadlines,
+          ),
+          const SizedBox(height: 16.0),
+          // Main Grid Tiles: tapping each tile pushes its respective screen.
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: GridView.count(
@@ -133,10 +202,10 @@ class HomeTab extends StatelessWidget {
               mainAxisSpacing: 16.0,
               childAspectRatio: 1.2,
               children: [
-                _buildGridCard("Find University", "assets/images/find.svg", 0),
-                _buildGridCard("Analytics", "assets/images/visual.svg", 1),
-                _buildGridCard("Prepare Test", "assets/images/test.svg", 2),
-                _buildGridCard("Chatbot", "assets/images/chat.svg", 3),
+                _buildGridCard(context, "Find University", "assets/images/find.svg", 0),
+                _buildGridCard(context, "Analytics", "assets/images/visual.svg", 1),
+                _buildGridCard(context, "Prepare Test", "assets/images/test.svg", 2),
+                _buildGridCard(context, "Chatbot", "assets/images/chat.svg", 3),
               ],
             ),
           ),
@@ -157,10 +226,9 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildGridCard(String title, String iconPath, int index) {
-    final colorPair = circleColors[index % 4];
-    final gradient = cardGradients[index % 4];
-    final titleColor = titleCardColors[index % 4];
+  Widget _buildGridCard(BuildContext context, String title, String iconPath, int index) {
+    final gradient = cardGradients[index % cardGradients.length];
+    final titleColor = titleCardColors[index % titleCardColors.length];
 
     return Material(
       color: Colors.transparent,
@@ -179,10 +247,46 @@ class HomeTab extends StatelessWidget {
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(16.0),
-          onTap: () => onGridItemSelected(index),
+          onTap: () {
+            // Based on the tile tapped, push the corresponding screen.
+            switch (index) {
+              case 0:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const UniversitySearchScreen(),
+                  ),
+                );
+                break;
+              case 1:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AnalyticsTrackingScreen(),
+                  ),
+                );
+                break;
+              case 2:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EntryTestScreen(subjectName: ""),
+                  ),
+                );
+                break;
+              case 3:
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ChatbotScreen(),
+                  ),
+                );
+                break;
+            }
+          },
           child: Stack(
             children: [
-              // Title Card (top-left)
+              // Title card at the top-left.
               Positioned(
                 top: 12,
                 left: 12,
@@ -202,7 +306,7 @@ class HomeTab extends StatelessWidget {
                   ),
                 ),
               ),
-              // Circular Button (bottom-left)
+              // Circular button at the bottom-left.
               Positioned(
                 bottom: 12,
                 left: 12,
@@ -210,7 +314,8 @@ class HomeTab extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: colorPair['circle']!.withOpacity(0.9),
+                    color: circleColors[index % circleColors.length]['circle']!
+                        .withOpacity(0.9),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -226,12 +331,12 @@ class HomeTab extends StatelessWidget {
                       "assets/images/back.svg",
                       width: 16,
                       height: 16,
-                      color: colorPair['icon'],
+                      color: circleColors[index % circleColors.length]['icon'],
                     ),
                   ),
                 ),
               ),
-              // Main Icon (bottom-right)
+              // Main icon at the bottom-right.
               Positioned(
                 bottom: 12,
                 right: 12,
@@ -254,24 +359,40 @@ class HomeTab extends StatelessWidget {
   }
 }
 
-class WelcomeCard extends StatelessWidget {
-  final String userName;
+/// InfoCarouselCard shows dynamic information such as last login time and deadlines.
+class InfoCarouselCard extends StatefulWidget {
   final DateTime lastLogin;
+  final List<Map<String, String>> deadlines;
 
-  const WelcomeCard({
+  const InfoCarouselCard({
     Key? key,
-    required this.userName,
     required this.lastLogin,
+    required this.deadlines,
   }) : super(key: key);
 
-  String getFormattedLastLogin() {
-    return '${lastLogin.day}/${lastLogin.month}/${lastLogin.year} ${lastLogin.hour}:${lastLogin.minute.toString().padLeft(2, '0')}';
+  @override
+  State<InfoCarouselCard> createState() => _InfoCarouselCardState();
+}
+
+class _InfoCarouselCardState extends State<InfoCarouselCard> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(16.0),
+      height: 180,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -281,42 +402,129 @@ class WelcomeCard extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(16.0),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Hello,',
-                  style: TextStyle(
-                    fontSize: 22.0,
-                    color: AppColors.darkBlue,
-                  ),
+          // A PageView for the different info slides.
+          Column(
+            children: [
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentPage = index;
+                    });
+                  },
+                  children: [
+                    // Slide 1: Last Login Info.
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Last Login",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "You last logged in on ${_formatDate(widget.lastLogin)}",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: AppColors.myBlack,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Slide 2: Upcoming Deadlines.
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Upcoming Deadlines",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...widget.deadlines.map((deadline) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 4.0),
+                              child: Text(
+                                "${deadline['event']}: ${deadline['date']}",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.myBlack,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ],
+                      ),
+                    ),
+                    // Slide 3: Profile Completion (Quick Stats).
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Profile Completion",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.darkBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            "Your profile is 80% complete.",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppColors.myBlack,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(
+                            value: 0.8,
+                            backgroundColor: AppColors.myGray,
+                            valueColor: const AlwaysStoppedAnimation(AppColors.darkBlue),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  userName,
-                  style: TextStyle(
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.myBlack,
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-                Text(
-                  'Last login: ${getFormattedLastLogin()}',
-                  style: TextStyle(
-                    fontSize: 12.0,
-                    color: AppColors.myBlack.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SvgPicture.asset(
-            'assets/images/student_laptop.svg',
-            height: 100.0,
-            width: 80.0,
+              ),
+              const SizedBox(height: 8),
+              // Dot indicators for the carousel.
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(3, (index) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                    width: _currentPage == index ? 12 : 8,
+                    height: _currentPage == index ? 12 : 8,
+                    decoration: BoxDecoration(
+                      color: _currentPage == index ? AppColors.darkBlue : AppColors.myGray,
+                      shape: BoxShape.circle,
+                    ),
+                  );
+                }),
+              ),
+            ],
           ),
         ],
       ),

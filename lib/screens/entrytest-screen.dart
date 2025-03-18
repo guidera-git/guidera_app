@@ -8,6 +8,8 @@ import 'package:guidera_app/screens/question-screen.dart';
 import 'package:guidera_app/theme/app_colors.dart'; // <-- Import your color constants
 import 'dart:math' as math;
 
+import 'home_screen.dart';
+
 class EntryTestScreen extends StatefulWidget {
   final String subjectName;
 
@@ -72,15 +74,45 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: AppColors.myBlack,
+      // Custom AppBar with header and back button
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Stack(
+          children: [
+            const GuideraHeader(),
+            Positioned(
+              top: 70,
+              left: 10,
+              child: IconButton(
+                icon: SvgPicture.asset(
+                  "assets/images/back.svg",
+                  color: AppColors.myWhite,
+                  height: 30,
+                ),
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    // Fallback: navigate to a default screen (e.g., HomeScreen)
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
       body: Column(
         children: [
-          const GuideraHeader(),
           Expanded(
             child: HomeTab(
               onGridItemSelected: (index) {
                 // Handle grid item selection
-                final subject = ["Chemistry", "Biology", "Physics", "English", "Computer Science"][index];
+                final subject = ["Chemistry", "Biology", "Physics", "English", "Computer"][index];
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -95,11 +127,11 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: GuideraBottomNavBar(
-        items: items,
-        initialIndex: _currentIndex,
-        onItemSelected: (index) => setState(() => _currentIndex = index),
-      ),
+      // bottomNavigationBar: GuideraBottomNavBar(
+      //   items: items,
+      //   initialIndex: _currentIndex,
+      //   onItemSelected: (index) => setState(() => _currentIndex = index),
+      // ),
     );
   }
 }
@@ -145,7 +177,7 @@ class HomeTab extends StatelessWidget {
                       _buildGridCard("Biology", "assets/images/biology.svg", 1),
                       _buildGridCard("Physics", "assets/images/physics.svg", 2),
                       _buildGridCard("English", "assets/images/english.svg", 3),
-                      _buildGridCard("Computer Science", "assets/images/test.svg", 4),
+                      _buildGridCard("Computer", "assets/images/test.svg", 4),
                     ],
                   ),
                 ),
@@ -296,15 +328,15 @@ class WelcomeCard extends StatelessWidget {
                 Text(
                   'Enjoy Preparing',
                   style: TextStyle(
-                    fontSize: 22.0,
+                    fontSize: 20.0,
                     color: AppColors.darkBlue,
                   ),
                 ),
                 Text(
                   userName,
                   style: TextStyle(
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.normal,
                     color: AppColors.myBlack,
                   ),
                 ),

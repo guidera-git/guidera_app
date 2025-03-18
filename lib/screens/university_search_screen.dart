@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/models/university.dart';
 import 'package:guidera_app/screens/recommendation_loading_screen.dart';
+import 'package:guidera_app/screens/recommendation_results_screen.dart';
+import 'package:guidera_app/screens/save_uni.dart';
+import 'package:guidera_app/screens/university_information.dart';
 import 'package:guidera_app/theme/app_colors.dart';
+
+import 'home_screen.dart';
 
 class UniversitySearchScreen extends StatefulWidget {
   const UniversitySearchScreen({super.key});
@@ -57,7 +63,37 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.myBlack,
-      appBar: _buildAppBar(),
+      // Custom AppBar using GuideraHeader with a back button.
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Stack(
+          children: [
+            const GuideraHeader(),
+            Positioned(
+              top: 70,
+              left: 10,
+              child: IconButton(
+                icon: SvgPicture.asset(
+                  "assets/images/back.svg",
+                  color: AppColors.myWhite,
+                  height: 30,
+                ),
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    // Fallback: navigate to a default screen (e.g., HomeScreen)
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
       body: Stack(
         children: [
           _buildBody(),
@@ -111,7 +147,17 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                 width: 30,
                 color: AppColors.darkGray,
               ),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                } else {
+                  // Fallback: navigate to a default screen (e.g., HomeScreen)
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  );
+                }
+              },
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -231,6 +277,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                     final uni = _universities[index];
                     final isSelected = _selectedForComparison.contains(uni.id);
                     return _buildUniversityCard(
+                      context, // Pass the context here
                       university: uni,
                       isSelected: isSelected,
                       onCompareToggle: () {
@@ -247,6 +294,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                   childCount: _universities.length,
                 ),
               ),
+
             ],
           ),
         ),
@@ -256,7 +304,22 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
           right: 20,
           child: ElevatedButton.icon(
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>RecommendationLoadingScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RecommendationLoadingScreen(
+                    onLoaderComplete: () {
+                      // Navigate to RecommendationResultsScreen after loader completes
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RecommendationResultsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.lightBlue,
@@ -603,118 +666,136 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   }
 
   // University card with compare toggle.
-  Widget _buildUniversityCard({
-    required University university,
-    required bool isSelected,
-    required VoidCallback onCompareToggle,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: AppColors.myGray,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top row with university name and icons.
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Text(
-                    university.name,
-                    style: TextStyle(
-                      fontFamily: 'Product Sans',
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.myBlack,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Transform.translate(
-                  offset: const Offset(20, 0),
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () {
-                      // Save functionality placeholder.
-                    },
-                    icon: SvgPicture.asset(
-                      'assets/images/save.svg',
-                      width: 25,
-                      color: AppColors.myBlack,
-                    ),
-                  ),
-                ),
-                Transform.translate(
-                  offset: const Offset(10, 0),
-                  child: IconButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: onCompareToggle,
-                    icon: SvgPicture.asset(
-                      'assets/images/compare.svg',
-                      width: 25,
-                      color: isSelected ? AppColors.lightBlue : AppColors
-                          .myBlack,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            // University details.
-            Row(
-              children: [
-                _buildLabelValue('Degree', university.degree),
-                const SizedBox(width: 116),
-                _buildLabelValue(
-                    'Duration', '${university.duration} Semesters'),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _buildLabelValue('Beginning', university.beginning),
-                const SizedBox(width: 60),
-                _buildLabelValue(
-                    'Tuition Fee Per Sem', '${university.feePerSem} PKR'),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Row(children: _buildStarIconsBlack(university.rating)),
-                const SizedBox(width: 75),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      university.location,
+  Widget _buildUniversityCard(
+      BuildContext context, { // Added context parameter
+        required University university,
+        required bool isSelected,
+        required VoidCallback onCompareToggle,
+      }) {
+    return InkWell(
+      onTap: () {
+        // Navigate to the dedicated UniversityInformation screen.
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => UniversityInformation(),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: AppColors.myGray,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top row with university name and icons.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      university.name,
                       style: TextStyle(
                         fontFamily: 'Product Sans',
-                        fontSize: 14,
-                        fontWeight: FontWeight.normal,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
                         color: AppColors.myBlack,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 4),
-                    SvgPicture.asset(
-                      'assets/images/location.svg',
-                      width: 16,
-                      color: AppColors.myBlack,
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SavedUniversitiesScreen()),
+                      );
+                    },
+                    child: Transform.translate(
+                      offset: const Offset(20, 0),
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () {
+                          // Save functionality placeholder.
+                        },
+                        icon: SvgPicture.asset(
+                          'assets/images/save.svg',
+                          width: 25,
+                          color: AppColors.myBlack,
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ],
+                  ),
+                  Transform.translate(
+                    offset: const Offset(10, 0),
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: onCompareToggle,
+                      icon: SvgPicture.asset(
+                        'assets/images/compare.svg',
+                        width: 25,
+                        color: isSelected ? AppColors.lightBlue : AppColors.myBlack,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // University details.
+              Row(
+                children: [
+                  _buildLabelValue('Degree', university.degree),
+                  const SizedBox(width: 116),
+                  _buildLabelValue('Duration', '${university.duration} Semesters'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildLabelValue('Beginning', university.beginning),
+                  const SizedBox(width: 60),
+                  _buildLabelValue('Tuition Fee Per Sem', '${university.feePerSem} PKR'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Row(children: _buildStarIconsBlack(university.rating)),
+                  const SizedBox(width: 75),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        university.location,
+                        style: TextStyle(
+                          fontFamily: 'Product Sans',
+                          fontSize: 14,
+                          fontWeight: FontWeight.normal,
+                          color: AppColors.myBlack,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      SvgPicture.asset(
+                        'assets/images/location.svg',
+                        width: 16,
+                        color: AppColors.myBlack,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
 
   Widget _buildLabelValue(String label, String value) {
     return Column(
