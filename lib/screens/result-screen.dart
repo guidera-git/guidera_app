@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:guidera_app/screens/question-screen.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/Widgets/header.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -106,7 +107,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EntryTestScreen(subjectName: ""),
+                      builder: (context) => QuestionScreen(subjectName: ""),
                     ),
                   );
                 },

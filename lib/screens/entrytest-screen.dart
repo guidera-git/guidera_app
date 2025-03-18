@@ -281,8 +281,8 @@ class HomeTab extends StatelessWidget {
                 right: 12,
                 child: SvgPicture.asset(
                   iconPath,
-                  height: 64,
-                  width: 64,
+                  height: 50,
+                  width: 50,
                 ),
               ),
             ],
