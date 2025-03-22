@@ -3,14 +3,19 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/Widgets/fancy_nav_item.dart';
+import 'package:guidera_app/screens/privacy_policy.dart';
 import 'package:guidera_app/screens/profile_dashboard_screen.dart';
+import 'package:guidera_app/screens/rate_share_social_screen.dart';
+import 'package:guidera_app/screens/settings_screen.dart';
 import 'package:guidera_app/screens/university_search_screen.dart';
 import 'package:guidera_app/screens/analytics_screen.dart';
 import 'package:guidera_app/screens/chatbot_screen.dart';
+import 'package:guidera_app/screens/entrytest-screen.dart';
+import 'package:guidera_app/screens/notification_screen.dart';
+import 'package:guidera_app/screens/about_screen.dart';
+import 'package:guidera_app/screens/help_support_screen.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'dart:math' as math;
-import 'package:guidera_app/screens/entrytest-screen.dart';
-import 'package:guidera_app/screens/notification_screen.dart'; // NEW: Notification screen
 
 /// HomeScreen now loads its header only for the Home tab.
 class HomeScreen extends StatefulWidget {
@@ -20,8 +25,29 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+/// Simple model for each drawer item.
+class _DrawerItem {
+  final String title;
+  final String svgPath;
+
+  const _DrawerItem({required this.title, required this.svgPath});
+}
+
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+
+  // Track the selected item in the drawer for highlighting.
+  int _selectedDrawerIndex = 0;
+
+  // Define the drawer items with text and corresponding SVG paths.
+  final List<_DrawerItem> _drawerItems = [
+    _DrawerItem(title: "Home", svgPath: "assets/images/home.svg"),
+    _DrawerItem(title: "About Guidera", svgPath: "assets/images/info.svg"),
+    _DrawerItem(title: "Privacy & Policies", svgPath: "assets/images/privacy.svg"),
+    _DrawerItem(title: "Settings", svgPath: "assets/images/settings.svg"),
+    _DrawerItem(title: "Help & Support", svgPath: "assets/images/help.svg"),
+    _DrawerItem(title: "Rate & Social", svgPath: "assets/images/share.svg"),
+  ];
 
   // Colors and gradients used by the grid tiles on the Home dashboard.
   final List<LinearGradient> _cardGradients = [
@@ -57,10 +83,59 @@ class _HomeScreenState extends State<HomeScreen> {
         titleCardColors: _titleCardColors,
         circleColors: _circleColors,
       ),
-      const UniversitySearchScreen(), // Ensure this screen has its own header within its layout.
-      const UserProfileScreen(),        // Likewise, include your profile header inside this screen.
-      const NotificationScreen(),       // NEW: Notification tab screen with its own header.
+      const UniversitySearchScreen(),
+      const UserProfileScreen(),
+      const NotificationScreen(),
     ];
+  }
+
+  // Handle drawer item taps:
+  //  - For "Home" (index 0), set _currentIndex=0 to show the Home tab.
+  //  - For others, push their respective screens.
+  void _handleDrawerNavigation(int index) {
+    Navigator.pop(context); // Close the drawer
+    setState(() {
+      _selectedDrawerIndex = index;
+    });
+
+    switch (index) {
+      case 0:
+      // Home
+        setState(() {
+          _currentIndex = 0;
+        });
+        break;
+      case 1:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => AboutGuideraScreen()),
+        );
+        break;
+      case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const PrivacyScreen()),
+        );
+        break;
+      case 3:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SettingsScreen()),
+        );
+        break;
+      case 4:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HelpSupportScreen()),
+        );
+        break;
+      case 5:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const RateShareSocialScreen()),
+        );
+        break;
+    }
   }
 
   @override
@@ -68,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color backgroundColor = isDarkMode ? AppColors.myBlack : AppColors.myWhite;
 
-    // Updated navigation items to include Notification tab.
+    // Bottom navigation items.
     final List<FancyNavItem> items = [
       FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
       FancyNavItem(label: "Search", svgPath: "assets/images/search.svg"),
@@ -89,13 +164,118 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       child: Scaffold(
         backgroundColor: AppColors.myBlack,
+        // Professional Drawer
+        drawer: Drawer(
+          backgroundColor: AppColors.myBlack,
+          width: 260,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // HEADER with avatar, name, email
+              Container(
+                color: AppColors.myBlack,
+                padding: const EdgeInsets.only(top: 62, left: 26, bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Circular Avatar
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundImage: NetworkImage(
+                        "https://avatars.githubusercontent.com/u/168419532?v=4",
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Name + Email
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          "Saad",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.myWhite,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          "saad@example.com",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.myGray,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Divider
+              const Divider(color: AppColors.myGray, thickness: 1, height: 0),
+              // DRAWER ITEMS
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _drawerItems.length,
+                  itemBuilder: (context, index) {
+                    final item = _drawerItems[index];
+                    final isSelected = _selectedDrawerIndex == index;
+
+                    return InkWell(
+                      onTap: () => _handleDrawerNavigation(index),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.myGray : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ListTile(
+                          leading: SvgPicture.asset(
+                            item.svgPath,
+                            color: isSelected ? AppColors.darkBlue : AppColors.myWhite,
+                            width: 24,
+                            height: 24,
+                          ),
+                          title: Text(
+                            item.title,
+                            style: TextStyle(
+                              color: isSelected ? AppColors.darkBlue : AppColors.myWhite,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+
         // Only load header for Home tab. Other tabs should render their own header inside their screen.
         appBar: _currentIndex == 0
             ? PreferredSize(
           preferredSize: const Size.fromHeight(120),
-          child: const GuideraHeader(),
+          child: Builder(
+            builder: (context) => Stack(
+              children: [
+                const GuideraHeader(),
+                Positioned(
+                  top: 75, // Adjust this value to lower the icon as desired
+                  left: 10,
+                  child: IconButton(
+                    icon: const Icon(Icons.menu, color: AppColors.myWhite),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
+                ),
+              ],
+            ),
+          ),
         )
             : null,
+
         body: _screens[_currentIndex],
         bottomNavigationBar: GuideraBottomNavBar(
           items: items,
@@ -176,7 +356,7 @@ class HomeTab extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 25,
                     backgroundImage: NetworkImage(
-                        "https://avatars.githubusercontent.com/u/168419532?v=4"
+                      "https://avatars.githubusercontent.com/u/168419532?v=4",
                     ),
                     backgroundColor: AppColors.darkBlue,
                   ),
@@ -226,7 +406,12 @@ class HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildGridCard(BuildContext context, String title, String iconPath, int index) {
+  Widget _buildGridCard(
+      BuildContext context,
+      String title,
+      String iconPath,
+      int index,
+      ) {
     final gradient = cardGradients[index % cardGradients.length];
     final titleColor = titleCardColors[index % titleCardColors.length];
 
@@ -270,7 +455,8 @@ class HomeTab extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const EntryTestScreen(subjectName: ""),
+                    builder: (context) =>
+                    const EntryTestScreen(subjectName: ""),
                   ),
                 );
                 break;
@@ -518,7 +704,9 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                     width: _currentPage == index ? 12 : 8,
                     height: _currentPage == index ? 12 : 8,
                     decoration: BoxDecoration(
-                      color: _currentPage == index ? AppColors.darkBlue : AppColors.myGray,
+                      color: _currentPage == index
+                          ? AppColors.darkBlue
+                          : AppColors.myGray,
                       shape: BoxShape.circle,
                     ),
                   );
