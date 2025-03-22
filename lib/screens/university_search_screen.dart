@@ -4,7 +4,7 @@ import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/models/university.dart';
 import 'package:guidera_app/screens/recommendation_loading_screen.dart';
 import 'package:guidera_app/screens/recommendation_results_screen.dart';
-import 'package:guidera_app/screens/save_uni.dart';
+import 'package:guidera_app/screens/saved_programs_screen.dart';
 import 'package:guidera_app/screens/university_information.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 
@@ -69,34 +69,17 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         child: Stack(
           children: [
             const GuideraHeader(),
-            Positioned(
-              top: 70,
-              left: 10,
-              child: IconButton(
-                icon: SvgPicture.asset(
-                  "assets/images/back.svg",
-                  color: AppColors.myWhite,
-                  height: 30,
-                ),
-                onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  } else {
-                    // Fallback: navigate to a default screen (e.g., HomeScreen)
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                    );
-                  }
-                },
-              ),
-            ),
           ],
         ),
       ),
       body: Stack(
         children: [
-          _buildBody(),
+          Column(
+            children: [
+              _buildAppBar(),
+              Expanded(child: _buildBody()),
+            ],
+          ),
           // Draggable Compare Button – appears only when at least 2 universities are selected.
           if (_selectedForComparison.length >= 2)
             Positioned(
@@ -713,7 +696,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => SavedUniversitiesScreen()),
+                        MaterialPageRoute(builder: (context) => SavedProgramsScreen()),
                       );
                     },
                     child: Transform.translate(
