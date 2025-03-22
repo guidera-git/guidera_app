@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:guidera_app/screens/home_screen.dart';
 import 'package:guidera_app/screens/recommendation_results_screen.dart';
+
+import 'package:guidera_app/screens/signup.dart';
+
 import 'package:guidera_app/screens/university_information.dart';
+
 import 'package:guidera_app/screens/university_search_screen.dart';
 import 'screens/splash_screen.dart';
 import 'theme/theme.dart';
