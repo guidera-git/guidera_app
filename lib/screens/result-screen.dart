@@ -5,9 +5,7 @@ import 'package:guidera_app/Widgets/header.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/animation.dart';
-import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
-import 'package:guidera_app/Widgets/fancy_nav_item.dart';
-import 'entrytest-screen.dart';
+
 
 class ResultScreen extends StatefulWidget {
   final int totalScore;
@@ -29,26 +27,9 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   late AnimationController _controller;
   late Animation<double> _animation;
   int _currentIndex = 0;
-
-  final List<FancyNavItem> items = [
-    FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
-    FancyNavItem(label: "Search", svgPath: "assets/images/search.svg"),
-    FancyNavItem(label: "Profile", svgPath: "assets/images/profile.svg"),
-    FancyNavItem(label: "Notifications", svgPath: "assets/images/notification.svg"),
-  ];
-
-  Future<bool> canRetakeTest() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastRetakeTimestamp = prefs.getInt('lastRetakeTimestamp') ?? 0;
-    final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
-    final cooldownDuration = 24 * 60 * 60 * 1000;
-    return (currentTimestamp - lastRetakeTimestamp) >= cooldownDuration;
-  }
-
-  Future<void> setRetakeTimestamp() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('lastRetakeTimestamp', DateTime.now().millisecondsSinceEpoch);
-  }
+  int retakesLeft = 2; // Number of retakes left
+  bool isRetakeEnabled = false; // Whether retake is allowed
+  String retakeMessage = "You have 2 retakes left."; // Retake status message
 
   @override
   void initState() {
@@ -64,12 +45,76 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       });
 
     _controller.forward();
+    _checkRetakeStatus(); // Check retake status when the screen loads
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  // Check if the user can retake the test
+  Future<void> _checkRetakeStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastRetakeTimestamp = prefs.getInt('lastRetakeTimestamp') ?? 0;
+    final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
+    final cooldownDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+    // Check if 24 hours have passed since the last retake
+    if ((currentTimestamp - lastRetakeTimestamp) >= cooldownDuration) {
+      setState(() {
+        isRetakeEnabled = true;
+      });
+    } else {
+      setState(() {
+        isRetakeEnabled = false;
+        retakeMessage = "You can retake the test after 24 hours.";
+      });
+    }
+
+    // Update the number of retakes left
+    final retakes = prefs.getInt('retakesLeft') ?? 2;
+    setState(() {
+      retakesLeft = retakes;
+      if (retakesLeft <= 0) {
+        retakeMessage = "No retakes left.";
+      }
+    });
+  }
+
+  // Handle retake button press
+  Future<void> _handleRetake() async {
+    if (retakesLeft <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("No retakes left."),
+        ),
+      );
+      return;
+    }
+
+    if (!isRetakeEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("You can retake the test after 24 hours."),
+        ),
+      );
+      return;
+    }
+
+    // Update retake count and timestamp
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('retakesLeft', retakesLeft - 1);
+    await prefs.setInt('lastRetakeTimestamp', DateTime.now().millisecondsSinceEpoch);
+
+    // Navigate back to the question screen
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuestionScreen(subjectName: widget.subjectName),
+      ),
+    );
   }
 
   @override
@@ -93,7 +138,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     }
 
     return Scaffold(
-      backgroundColor: AppColors.darkBlack,
+      backgroundColor: AppColors.myBlack,
       body: Stack(
         children: [
           const GuideraHeader(),
@@ -104,12 +149,18 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
               angle: 0.0,
               child: GestureDetector(
                 onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => QuestionScreen(subjectName: ""),
-                    ),
-                  );
+                  // Check if the previous screen is QuestionScreen
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop(); // Go back to the previous screen
+                  } else {
+                    // If QuestionScreen is not in the stack, navigate to it explicitly
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => QuestionScreen(subjectName: widget.subjectName),
+                      ),
+                    );
+                  }
                 },
                 child: SvgPicture.asset(
                   "assets/images/back.svg",
@@ -148,7 +199,6 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                     ),
                   ),
                 ),
-
 
                 // Existing Card
                 Padding(
@@ -243,15 +293,49 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                     ],
                   ),
                 ),
+
+                // Retake Button (Only shown if the user failed)
+                if (percentage < 70) // Show retake button only if the user failed
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20),
+                    child: Column(
+                      children: [
+                        Text(
+                          retakeMessage,
+                          style: TextStyle(
+                            color: AppColors.myWhite,
+                            fontSize: 16,
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _handleRetake,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isRetakeEnabled ? Colors.red : AppColors.darkGray, // Red color for retake button
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child: Text(
+                              "Retake Test",
+                              style: TextStyle(
+                                color: AppColors.darkBlue,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: GuideraBottomNavBar(
-        items: items,
-        initialIndex: _currentIndex,
-        onItemSelected: (index) => setState(() => _currentIndex = index),
       ),
     );
   }

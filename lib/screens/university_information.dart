@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:guidera_app/screens/saved_programs_screen.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
 import 'package:guidera_app/widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/widgets/fancy_nav_item.dart';
-
-
+import 'SavedUniversitiesScreen.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class UniversityInformation extends StatefulWidget {
   const UniversityInformation({Key? key}) : super(key: key);
@@ -18,6 +19,7 @@ class UniversityInformation extends StatefulWidget {
 class _UniversityInformationState extends State<UniversityInformation> {
   int selectedIndex = 0;
   int _navIndex = 0;
+  bool isSaved = false; // Track save state
 
   final List<String> chipLabels = [
     'Overview',
@@ -29,9 +31,25 @@ class _UniversityInformationState extends State<UniversityInformation> {
   ];
 
   static const List<Color> rowColors = [
-    Color(0xFF222222),
+    Color(0xFF565756),
     Color(0xFF3F3F3F),
   ];
+
+  void _toggleSave() {
+    setState(() {
+      isSaved = !isSaved; // Toggle save state
+    });
+
+    // Show toast message
+    Fluttertoast.showToast(
+      msg: isSaved ? "Data is saved" : "Data is unsaved",
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      backgroundColor: AppColors.darkBlue,
+      textColor: AppColors.myWhite,
+      fontSize: 16.0,
+    );
+  }
 
   List<Map<String, String>> _generateOverviewItems() {
     return [
@@ -86,8 +104,8 @@ class _UniversityInformationState extends State<UniversityInformation> {
   List<Map<String, String>> _generateFeeDetails() {
     return [
       {
-        'per_credit_hour_fee': '10,000 PKR',
-        'total_tution_fee': '1,300,000 PKR',
+        'Per credit hour': '10,000 PKR',
+        'Total Fee': '1,300,000 PKR',
       },
     ];
   }
@@ -99,14 +117,24 @@ class _UniversityInformationState extends State<UniversityInformation> {
         'introduction': 'The National University of Computer & Emerging Sciences has the honor of being the first multi-campus private sector university set up under the Federal Charter granted by Ordinance No.XXIII of 2000, dated July 01, 2000.',
         'main_link': 'https://www.ucp.edu.pk',
         'ranking': 'Top 10 in Punjab',
-        'info_email': 'admissions@ucp.edu.pk',
+        'info_email': 'https://online-admissions.ucp.edu.pk/',
         'Phone': '+92 42 35880007',
-        'instagram': 'https://www.instagram.com/fast_nuces/',
-        'facebook': 'https://www.facebook.com/FastUniversityOfficial/',
+        'instagram': 'https://www.instagram.com/ucpofficial/',
+        'facebook': 'https://www.facebook.com/UCPofficial',
         'twitter': 'https://www.twitter.com/FastNuOfficial',
       },
     ];
   }
+
+  void _shareApp(BuildContext context) {
+    // Replace with the actual information you want to share
+    String shareText = "Check out this university: [University Name]\n"
+        "Program: [Program Name]\n"
+        "Link: [University Website]";
+
+    Share.share(shareText); // Opens the system share sheet
+  }
+
 
   Future<List<Map<String, String>>> _fetchSectionData(int index) async {
     await Future.delayed(const Duration(milliseconds: 500));
@@ -132,45 +160,57 @@ class _UniversityInformationState extends State<UniversityInformation> {
     return Card(
       margin: const EdgeInsets.all(16),
       color: AppColors.myWhite,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            const Text(
-              "To activate the map, click on the \"Show map\" button. We would like to point out that data will be transmitted to OpenStreetMap after activation. You can find out more in our privacy policy. You can revoke your consent to the transmission of data at any time.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.lightBlue,
-                fontSize: 12,
-                fontFamily: "ProductSans",
+      child: Stack(
+        children: [
+          // Background SVG Image
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.5,
+              child: Image.asset(
+                "assets/images/globe.jpg",
+                fit: BoxFit.cover,
+
+                // Adjust the image to cover the card
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.darkBlue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: () {
-                // Add your map activation logic here
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Map functionality would be implemented here'),
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                const Text(
+                  "To activate the map, click on the \"Show map\" button. We would like to point out that data will be transmitted to OpenStreetMap after activation. You can find out more in our privacy policy. You can revoke your consent to the transmission of data at any time.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.myBlack,
+                    fontSize: 12,
+                    fontFamily: "ProductSans",
                   ),
-                );
-              },
-              child: const Text(
-                "Show Map",
-                style: TextStyle(
-                  color: AppColors.myWhite,
-                  fontFamily: "ProductSans",
                 ),
-              ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkBlue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () {
+                    _openGoogleMaps(); // Reuse the existing function
+                  },
+                  child: const Text(
+                    "Show Map",
+                    style: TextStyle(
+                      color: AppColors.myWhite,
+                      fontFamily: "ProductSans",
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -189,27 +229,28 @@ class _UniversityInformationState extends State<UniversityInformation> {
             child: Text(
               label,
               style: const TextStyle(
-                color: AppColors.lightBlue,
+                color: AppColors.myWhite,
                 fontSize: 14,
                 fontFamily: "ProductSans",
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
           const SizedBox(width: 25),
           Expanded(
             flex: 6,
-            child: (label.contains('Link') || label.contains('Social Media'))
+            child: (label.contains('Link') || label.contains('Social Media') || label.contains('info_email'))
                 ? GestureDetector(
               onTap: () {
-                /* Handle link opening */
+                _launchURL(value); // Launch the URL
               },
               child: Text(
                 value,
                 style: TextStyle(
-                  color: AppColors.darkBlue,
+                  color: AppColors.myWhite,
                   fontSize: 14,
                   fontFamily: "ProductSans",
-                  fontWeight: FontWeight.bold,
+
                   decoration: TextDecoration.underline,
                 ),
               ),
@@ -217,7 +258,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                 : Text(
               value,
               style: TextStyle(
-                color: AppColors.darkBlue,
+                color: AppColors.myWhite,
                 fontSize: 14,
                 fontFamily: "ProductSans",
                 fontWeight: FontWeight.bold,
@@ -228,6 +269,15 @@ class _UniversityInformationState extends State<UniversityInformation> {
         ],
       ),
     );
+  }
+
+  /// Launches the given URL in the default browser.
+  void _launchURL(String url) async {
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw "Could not launch $url";
+    }
   }
 
   Widget _buildInfoChip(int index) {
@@ -253,6 +303,74 @@ class _UniversityInformationState extends State<UniversityInformation> {
     );
   }
 
+  void _showMapBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.myBlack,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Share Location",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppColors.myWhite,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Your location will be shared with the selected app.",
+              style: TextStyle(
+                color: AppColors.myWhite,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                _openGoogleMaps(); // Open Google Maps with UCP location
+                Navigator.pop(context); // Close the bottom sheet
+              },
+              child: Text(
+                "Share Location",
+                style: TextStyle(
+                  color: AppColors.myWhite,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openGoogleMaps() async {
+    print("Opening Google Maps...");
+    const double ucpLatitude = 31.4709;
+    const double ucpLongitude = 74.2660;
+    final String googleMapsUrl = "https://www.google.com/maps/search/?api=1&query=$ucpLatitude,$ucpLongitude";
+    print("Google Maps URL: $googleMapsUrl");
+
+    if (await canLaunch(googleMapsUrl)) {
+      print("Launching Google Maps...");
+      await launch(googleMapsUrl);
+    } else {
+      print("Could not launch Google Maps.");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Could not open Google Maps. Please check your internet connection or install Google Maps."),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -263,8 +381,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
             children: [
               const GuideraHeader(),
               Padding(
-                padding: const EdgeInsets.only(
-                    top: 3.0, left: 20.0, right: 20.0),
+                padding: const EdgeInsets.only(top: 3.0, left: 20.0, right: 20.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,20 +401,22 @@ class _UniversityInformationState extends State<UniversityInformation> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => SavedProgramsScreen()),
-                        );
-                      },
+                      onTap: _toggleSave, // Call the toggle function
                       child: Transform.translate(
                         offset: const Offset(8, 1),
-                        child: SvgPicture.asset(
-                          "assets/images/save.svg",
-                          height: 34,
-                          colorFilter: ColorFilter.mode(
-                            AppColors.myWhite,
-                            BlendMode.srcIn,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300), // Animation duration
+                          transitionBuilder: (Widget child, Animation<double> animation) {
+                            return ScaleTransition(scale: animation, child: child);
+                          },
+                          child: SvgPicture.asset(
+                            isSaved ? "assets/images/filledsave.svg" : "assets/images/save.svg",
+                            key: ValueKey<bool>(isSaved), // Unique key for animation
+                            height: 34,
+                            colorFilter: ColorFilter.mode(
+                              AppColors.myWhite,
+                              BlendMode.srcIn,
+                            ),
                           ),
                         ),
                       ),
@@ -347,30 +466,33 @@ class _UniversityInformationState extends State<UniversityInformation> {
                     const SizedBox(height: 18),
                     Row(
                       children: [
-                        SvgPicture.asset(
-                          "assets/images/share.svg",
-                          height: 22,
-                          colorFilter: ColorFilter.mode(
-                            AppColors.darkBlue,
-                            BlendMode.srcIn,
+                        // Share Icon
+                        GestureDetector(
+                          onTap: () {
+                            _shareApp(context); // Share functionality
+                          },
+                          child: SvgPicture.asset(
+                            "assets/images/share.svg",
+                            height: 22,
+                            colorFilter: ColorFilter.mode(
+                              AppColors.darkBlue,
+                              BlendMode.srcIn,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 14),
-                        SvgPicture.asset(
-                          "assets/images/compare.svg",
-                          height: 22,
-                          colorFilter: ColorFilter.mode(
-                            AppColors.darkBlue,
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        SvgPicture.asset(
-                          "assets/images/map.svg",
-                          height: 22,
-                          colorFilter: ColorFilter.mode(
-                            AppColors.darkBlue,
-                            BlendMode.srcIn,
+                        // Map Icon
+                        GestureDetector(
+                          onTap: () {
+                            _showMapBottomSheet(context); // Map functionality
+                          },
+                          child: SvgPicture.asset(
+                            "assets/images/map.svg",
+                            height: 22,
+                            colorFilter: ColorFilter.mode(
+                              AppColors.darkBlue,
+                              BlendMode.srcIn,
+                            ),
                           ),
                         ),
                       ],
@@ -402,13 +524,13 @@ class _UniversityInformationState extends State<UniversityInformation> {
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: ListView.builder(
-                        itemCount: entries.length + (selectedIndex == 5 ? 1 : 0), // Added
+                        itemCount: entries.length + (selectedIndex == 5 ? 1 : 0),
                         itemBuilder: (context, index) {
                           if (index < entries.length) {
                             final entry = entries[index];
                             return _buildTableRow(entry.key, entry.value, index);
                           }
-                          if (selectedIndex == 5) { // Show card only for About University
+                          if (selectedIndex == 5) {
                             return _buildMapConsentCard();
                           }
                           return const SizedBox.shrink();
@@ -421,7 +543,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
             ],
           ),
           Positioned(
-            top: 90,
+            top: 85,
             left: 20,
             child: Transform.rotate(
               angle: 0.0,
@@ -440,19 +562,6 @@ class _UniversityInformationState extends State<UniversityInformation> {
           ),
         ],
       ),
-      // bottomNavigationBar: GuideraBottomNavBar(
-      //   items: [
-      //     FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
-      //     FancyNavItem(label: "Find", svgPath: "assets/images/search.svg"),
-      //     FancyNavItem(
-      //         label: "Analytics", svgPath: "assets/images/analytics.svg"),
-      //     FancyNavItem(
-      //         label: "Entry Test", svgPath: "assets/images/entry_test.svg"),
-      //     FancyNavItem(label: "Chatbot", svgPath: "assets/images/chatbot.svg"),
-      //   ],
-      //   initialIndex: _navIndex,
-      //   onItemSelected: (index) => setState(() => _navIndex = index),
-      // ),
     );
   }
 }
