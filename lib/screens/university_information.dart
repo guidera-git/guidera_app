@@ -4,6 +4,7 @@ import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
 import 'package:guidera_app/widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/widgets/fancy_nav_item.dart';
+
 import 'SavedUniversitiesScreen.dart';
 
 
@@ -437,19 +438,6 @@ class _UniversityInformationState extends State<UniversityInformation> {
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: GuideraBottomNavBar(
-        items: [
-          FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
-          FancyNavItem(label: "Find", svgPath: "assets/images/search.svg"),
-          FancyNavItem(
-              label: "Analytics", svgPath: "assets/images/analytics.svg"),
-          FancyNavItem(
-              label: "Entry Test", svgPath: "assets/images/entry_test.svg"),
-          FancyNavItem(label: "Chatbot", svgPath: "assets/images/chatbot.svg"),
-        ],
-        initialIndex: _navIndex,
-        onItemSelected: (index) => setState(() => _navIndex = index),
       ),
     );
   }

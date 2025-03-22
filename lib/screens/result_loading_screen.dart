@@ -1,38 +1,35 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:guidera_app/screens/recommendation_results_screen.dart';
 import 'package:lottie/lottie.dart';
-import 'package:guidera_app/Widgets/header.dart';        // Your existing header component
+import 'package:guidera_app/Widgets/header.dart'; // Your existing header component
 import 'package:guidera_app/theme/app_colors.dart'; // Your color constants
 
-class RecommendationLoadingScreen extends StatefulWidget {
-  const RecommendationLoadingScreen({super.key, required Null Function() onLoaderComplete});
+class ResultLoaderScreen extends StatefulWidget {
+  final VoidCallback onLoaderComplete; // Callback for navigation
+
+  const ResultLoaderScreen({
+    super.key,
+    required this.onLoaderComplete, // Accept callback as parameter
+  });
 
   @override
-  State<RecommendationLoadingScreen> createState() => _RecommendationLoadingScreenState();
+  State<ResultLoaderScreen> createState() => _ResultLoaderScreenState();
 }
 
-class _RecommendationLoadingScreenState extends State<RecommendationLoadingScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
   int _currentMessageIndex = 0;
   final List<String> _messages = [
-    "Analyzing your academic profile...",
-    "Evaluating personality matches...",
-    "Scanning university databases...",
-    "Optimizing best choices...",
-    "Almost there!"
+    "Calculating your marks...",
+    "Results are coming soon...",
+    "Finalizing your score...",
+    "Almost there!",
+    "Your result is ready!"
   ];
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat();
-
     _startMessageCycle();
   }
 
@@ -42,21 +39,15 @@ class _RecommendationLoadingScreenState extends State<RecommendationLoadingScree
         setState(() => _currentMessageIndex = (_currentMessageIndex + 1) % _messages.length);
         if (timer.tick * 3 >= 15) {
           timer.cancel();
-          _navigateToResults();
+          _navigateAfterLoader();
         }
       }
     });
   }
 
-  void _navigateToResults() {
-    // Replace with actual navigation
-    Navigator.push(context, MaterialPageRoute(builder: (context) => RecommendationResultsScreen(),));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void _navigateAfterLoader() {
+    // Call the provided callback to handle navigation
+    widget.onLoaderComplete();
   }
 
   @override
@@ -96,62 +87,12 @@ class _RecommendationLoadingScreenState extends State<RecommendationLoadingScree
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildAnimatedBrain(isDarkMode),
-          const SizedBox(height: 30),
+          const SizedBox(height: 50), // Add some spacing
           _buildThinkingMessages(),
           const SizedBox(height: 40),
           _buildParticleAnimation(),
         ],
       ),
-    );
-  }
-
-  Widget _buildAnimatedBrain(bool isDarkMode) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        AnimatedContainer(
-          duration: const Duration(seconds: 2),
-          curve: Curves.easeInOut,
-          width: 180,
-          height: 180,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: (isDarkMode ? AppColors.darkBlue : AppColors.lightBlue)
-                .withOpacity(0.1),
-          ),
-        ),
-        RotationTransition(
-          turns: _controller,
-          child: Container(
-            width: 160,
-            height: 160,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: (isDarkMode ? AppColors.myWhite : AppColors.darkBlue)
-                    .withOpacity(0.3),
-                width: 1.5,
-              ),
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 120,
-          height: 120,
-          child: ColorFiltered(
-            colorFilter: ColorFilter.mode(
-              (isDarkMode ? AppColors.myWhite : AppColors.darkBlue)
-                  .withOpacity(0.8),
-              BlendMode.srcIn,
-            ),
-            child: Lottie.asset(
-              'assets/animations/ai_brain.json',
-              animate: true,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
