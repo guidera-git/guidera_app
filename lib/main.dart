@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:guidera_app/screens/analytics_screen.dart';
 import 'package:guidera_app/screens/chatbot_screen.dart';
+import 'package:guidera_app/screens/entrytest-screen.dart';
 import 'package:guidera_app/screens/home_screen.dart';
 import 'package:guidera_app/screens/login-signup.dart';
 import 'package:guidera_app/screens/login.dart';

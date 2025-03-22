@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/models/university.dart';
 import 'package:guidera_app/screens/recommendation_loading_screen.dart';
+import 'package:guidera_app/screens/recommendation_results_screen.dart';
 import 'package:guidera_app/screens/save_uni.dart';
 import 'package:guidera_app/screens/university_information.dart';
 import 'package:guidera_app/theme/app_colors.dart';
@@ -303,7 +304,22 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
           right: 20,
           child: ElevatedButton.icon(
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context)=>RecommendationLoadingScreen()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RecommendationLoadingScreen(
+                    onLoaderComplete: () {
+                      // Navigate to RecommendationResultsScreen after loader completes
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RecommendationResultsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.lightBlue,
