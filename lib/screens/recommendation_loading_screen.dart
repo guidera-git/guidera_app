@@ -7,7 +7,7 @@ import 'package:guidera_app/Widgets/header.dart';        // Your existing header
 import 'package:guidera_app/theme/app_colors.dart'; // Your color constants
 
 class RecommendationLoadingScreen extends StatefulWidget {
-  const RecommendationLoadingScreen({super.key});
+  const RecommendationLoadingScreen({super.key, required Null Function() onLoaderComplete});
 
   @override
   State<RecommendationLoadingScreen> createState() => _RecommendationLoadingScreenState();

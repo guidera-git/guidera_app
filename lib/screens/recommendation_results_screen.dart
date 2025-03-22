@@ -218,25 +218,25 @@ class RecommendationResultsScreen extends StatelessWidget {
               ],
             ),
           ),
-    Transform.translate(
-    offset: const Offset(-10, 0),
-    child: Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: onViewMore,
-              icon: const Text('View More Options',
-                  style: TextStyle(
-                      decoration: TextDecoration.underline,
-                      color: AppColors.darkBlue,
-                      decorationColor: AppColors.darkBlue)),
-              label: SvgPicture.asset(
-                'assets/images/right_arrow.svg',
-                width: 16,
-                color: AppColors.darkBlue,
+          Transform.translate(
+            offset: const Offset(-10, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onViewMore,
+                icon: const Text('View More Options',
+                    style: TextStyle(
+                        decoration: TextDecoration.underline,
+                        color: AppColors.darkBlue,
+                        decorationColor: AppColors.darkBlue)),
+                label: SvgPicture.asset(
+                  'assets/images/right_arrow.svg',
+                  width: 16,
+                  color: AppColors.darkBlue,
+                ),
               ),
             ),
           ),
-            ),
         ],
       ),
     );

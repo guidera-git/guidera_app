@@ -1,10 +1,12 @@
 // This file handles the UI and data model for dynamically loading questions based on subject selection.
 
 import 'package:flutter/material.dart';
+import 'package:guidera_app/screens/result_loading_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:guidera_app/theme/app_colors.dart';
+import 'package:guidera_app/screens/result-screen.dart';
 import 'dart:async';
-import 'package:flutter/material.dart';
+
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart'; // <-- Import your color constants
 import 'dart:math' as math;
@@ -362,6 +364,32 @@ class QuestionProvider extends ChangeNotifier {
       notifyListeners();
     });
   }
+  int calculateTotalScore() {
+    int totalScore = 0;
+    for (var question in questions) {
+      if (question.selectedOption == question.correctAnswer) {
+        totalScore++;
+      }
+    }
+    return totalScore;
+  }
+
+  String calculateGrade(int totalScore) {
+    double percentage = (totalScore / questions.length) * 100;
+    if (percentage >= 90) {
+      return 'A';
+    } else if (percentage >= 80) {
+      return 'B';
+    } else if (percentage >= 70) {
+      return 'C';
+    } else if (percentage >= 60) {
+      return 'D';
+    } else {
+      return 'F';
+    }
+  }
+
+
 
   void _startTimer() {
     const oneSec = Duration(seconds: 1);
@@ -518,8 +546,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
                             ),
 
                             // Honour Code and Submit Button
-                            SizedBox(height: 20),
+                            SizedBox(height: 10),
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start, // Align checkbox and text to the top
                               children: [
                                 Checkbox(
                                   value: isChecked,
@@ -530,12 +559,14 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                   },
                                   activeColor: AppColors.lightBlue,
                                 ),
+                                SizedBox(width: 0), // Reduced space between checkbox and text
                                 Expanded(
-                                  child: Align(
-                                    alignment: Alignment.centerLeft, // Align text to the left
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 1, right: 20), // Minimal top padding for alignment
                                     child: Text(
-                                      "I, Muhammad Aaliyan Umar, understand that submitting work that isn't my own may result in permanent failure of this process.",
+                                      "I, Muhammad Aaliyan Umar, understand that submitting work that isn't my own may result in failure or account deactivation.",
                                       style: TextStyle(color: AppColors.myWhite),
+                                      textAlign: TextAlign.left, // Ensure text is left-aligned
                                     ),
                                   ),
                                 ),
@@ -545,8 +576,32 @@ class _QuestionScreenState extends State<QuestionScreen> {
                             ElevatedButton(
                               onPressed: isSubmitEnabled
                                   ? () {
-                                      // Submit logic
-                                    }
+                                // Calculate total score and grade
+                                int totalScore = provider.calculateTotalScore();
+                                String grade = provider.calculateGrade(totalScore);
+
+                                // Navigate to ResultLoaderScreen with subject name, score, and grade
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ResultLoaderScreen(
+                                      onLoaderComplete: () {
+                                        // Navigate to ResultScreen after loader completes
+                                        Navigator.pushReplacement(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ResultScreen(
+                                              totalScore: totalScore, // Pass actual score
+                                              grade: grade, // Pass actual grade
+                                              subjectName: widget.subjectName, // Pass selected subject
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                );
+                              }
                                   : null,
                               child: Text('Submit'),
                               style: ElevatedButton.styleFrom(
