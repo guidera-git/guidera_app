@@ -44,6 +44,9 @@ dependencies:
   fluttertoast: ^8.2.1
   url_launcher: ^6.1.7
   share_plus: ^10.1.4
+  shimmer: ^3.0.0
+  flutter_riverpod: ^2.3.6
+  hooks_riverpod: ^2.3.6
 
 
     # The following adds the Cupertino Icons font to your application.

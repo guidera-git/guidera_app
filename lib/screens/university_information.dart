@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:guidera_app/screens/save_uni.dart';
+import 'package:guidera_app/screens/saved_programs_screen.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
 import 'package:guidera_app/widgets/fancy_bottom_nav_bar.dart';
@@ -287,7 +287,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => SavedUniversitiesScreen()),
+                          MaterialPageRoute(builder: (context) => SavedProgramsScreen()),
                         );
                       },
                       child: Transform.translate(

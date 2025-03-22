@@ -1,15 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
-import 'package:guidera_app/screens/profile_dashboard_screen.dart';
+import 'package:guidera_app/screens/application_screen.dart';
+import 'package:guidera_app/screens/saved_programs_screen.dart';
 
 class AnalyticsTrackingScreen extends StatefulWidget {
   const AnalyticsTrackingScreen({Key? key}) : super(key: key);
 
   @override
-  State<AnalyticsTrackingScreen> createState() => _AnalyticsTrackingScreenState();
+  State<AnalyticsTrackingScreen> createState() =>
+      _AnalyticsTrackingScreenState();
 }
 
 class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
@@ -53,6 +55,13 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
   final List<String> _filters = ['All', 'Recent', 'Completed', 'Unfinished'];
   String _activeFilter = 'All';
 
+  // Initial offset for the draggable floating button.
+  Offset _floatingButtonOffset = const Offset(170, 640);
+
+  // Button dimensions (adjust if needed)
+  final double _floatingButtonWidth = 180.0;
+  final double _floatingButtonHeight = 56.0;
+
   @override
   void initState() {
     super.initState();
@@ -92,7 +101,8 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
             top: 8,
             left: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.darkBlack.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(20),
@@ -120,22 +130,23 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
               ),
             ),
           ),
-          // Progress bar with curved sides.
+          // Curved progress bar.
           Positioned(
             top: 100,
             left: 0,
-            right: 200, // space for SVG image on the right.
+            right: 200, // space for the SVG image on the right.
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: LinearProgressIndicator(
                 value: data['progress'],
-                minHeight: 10,
+                minHeight: 6,
                 backgroundColor: AppColors.darkBlack.withOpacity(0.2),
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.darkBlue),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppColors.darkBlue),
               ),
             ),
           ),
-          // "View" button.
+          // "View" button with navigation.
           Positioned(
             top: 130,
             left: 0,
@@ -151,7 +162,12 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
                   elevation: 0,
                 ),
                 onPressed: () {
-                  // TODO: Implement "View" action.
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AdmissionJourneyScreen(),
+                    ),
+                  );
                 },
                 child: const Text(
                   "View",
@@ -219,7 +235,9 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
               width: isActive ? 12 : 8,
               height: isActive ? 12 : 8,
               decoration: BoxDecoration(
-                color: isActive ? AppColors.lightBlue : AppColors.myWhite.withOpacity(0.3),
+                color: isActive
+                    ? AppColors.lightBlue
+                    : AppColors.myWhite.withOpacity(0.3),
                 shape: BoxShape.circle,
               ),
             );
@@ -240,7 +258,8 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
             onTap: () => setState(() => _activeFilter = filter),
             child: Container(
               margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               decoration: BoxDecoration(
                 color: isActive ? AppColors.darkBlue : AppColors.lightGray,
                 borderRadius: BorderRadius.circular(20),
@@ -260,43 +279,106 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
     );
   }
 
+  /// Builds a custom, draggable floating button that stays within bounds.
+  Widget _buildDraggableFloatingButton() {
+    return Positioned(
+      left: _floatingButtonOffset.dx,
+      top: _floatingButtonOffset.dy,
+      child: Draggable(
+        feedback: _buildFloatingButton(),
+        childWhenDragging: Container(),
+        onDraggableCanceled: (velocity, offset) {
+          // Calculate screen boundaries using MediaQuery.
+          final screenSize = MediaQuery.of(context).size;
+          // Optional: account for padding (e.g., status bar, safe area) if needed.
+          final double minX = 0;
+          final double minY = MediaQuery.of(context).padding.top + kToolbarHeight;
+          final double maxX =
+              screenSize.width - _floatingButtonWidth;
+          final double maxY =
+              screenSize.height - _floatingButtonHeight - MediaQuery.of(context).padding.bottom;
+          final double newX = offset.dx.clamp(minX, maxX);
+          final double newY = offset.dy.clamp(minY, maxY);
+          setState(() {
+            _floatingButtonOffset = Offset(newX, newY);
+          });
+        },
+        child: _buildFloatingButton(),
+      ),
+    );
+  }
+
+  Widget _buildFloatingButton() {
+    return SizedBox(
+      width: _floatingButtonWidth,
+      height: _floatingButtonHeight,
+      child: FloatingActionButton.extended(
+        backgroundColor: AppColors.darkBlue,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SavedProgramsScreen(),
+            ),
+          );
+        },
+        icon: const Icon(Icons.folder, color: AppColors.myWhite),
+        label: const Text(
+          "Saved Programs",
+          style: TextStyle(color: AppColors.myWhite),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDataTable() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
-          headingRowColor: MaterialStateProperty.all(AppColors.myWhite.withOpacity(0.5)),
+          headingRowColor: MaterialStateProperty.all(
+              AppColors.myWhite.withOpacity(0.5)),
           columnSpacing: 16,
           columns: [
             DataColumn(
               label: Text(
                 "Application ID",
-                style: TextStyle(color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontWeight: FontWeight.bold),
               ),
             ),
             DataColumn(
               label: Text(
                 "Date",
-                style: TextStyle(color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontWeight: FontWeight.bold),
               ),
             ),
             DataColumn(
               label: Text(
                 "Status",
-                style: TextStyle(color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontWeight: FontWeight.bold),
               ),
             ),
             DataColumn(
               label: Text(
                 "Edit",
-                style: TextStyle(color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontWeight: FontWeight.bold),
               ),
             ),
             DataColumn(
               label: Text(
                 "Delete",
-                style: TextStyle(color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontWeight: FontWeight.bold),
               ),
             ),
           ],
@@ -305,19 +387,22 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
               DataCell(
                 Text(
                   application['id'] ?? "",
-                  style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.8)),
                 ),
               ),
               DataCell(
                 Text(
                   application['date'] ?? "",
-                  style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.8)),
                 ),
               ),
               DataCell(
                 Text(
                   application['status'] ?? "",
-                  style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                  style: TextStyle(
+                      color: Colors.white.withOpacity(0.8)),
                 ),
               ),
               DataCell(
@@ -350,7 +435,6 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -393,97 +477,133 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        child:
-        Column(
-          children: [
-            // Welcome row.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left: "Hello," and then user name.
-                  Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Hello,",
-                          style: TextStyle(
-                            color: AppColors.lightGray,
-                            fontSize: 17,
-                          ),
-                        ),
-                        Text(
-                          "Saad Mahmood",
-                          style: TextStyle(
-                            color: AppColors.myWhite,
-                            fontSize: 22,
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Right: "Notify me" + switch.
-                  Row(
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                // Welcome row.
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 16),
+                  child: Row(
+                    mainAxisAlignment:
+                    MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Notify me",
-                        style: TextStyle(
-                          color: AppColors.myWhite,
-                          fontSize: 14,
+                      // Left: "Hello," and then user name.
+                      Padding(
+                        padding: const EdgeInsets.all(10.0),
+                        child: Column(
+                          crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              "Hello,",
+                              style: TextStyle(
+                                color: AppColors.lightGray,
+                                fontSize: 17,
+                              ),
+                            ),
+                            Text(
+                              "Saad Mahmood",
+                              style: TextStyle(
+                                color: AppColors.myWhite,
+                                fontSize: 22,
+                                fontWeight: FontWeight.normal,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 3),
-                      Switch(
-                        value: _notifyMe,
-                        onChanged: (val) {
-                          setState(() => _notifyMe = val);
-                        },
-                        activeColor: AppColors.lightBlue,
+                      // Right: "Notify me" + switch.
+                      Row(
+                        children: [
+                          const Text(
+                            "Notify me",
+                            style: TextStyle(
+                              color: AppColors.myWhite,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          Switch(
+                            value: _notifyMe,
+                            onChanged: (val) {
+                              setState(() => _notifyMe = val);
+                            },
+                            activeColor: AppColors.lightBlue,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            // "Analytics & Tracking" title.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Analytics & Tracking",
-                  style: TextStyle(
-                    color: AppColors.myWhite,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                ),
+                // "Analytics & Tracking" title.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Analytics & Tracking",
+                      style: TextStyle(
+                        color: AppColors.myWhite,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                // Analytics card carousel.
+                _buildAnalyticsCarousel(context),
+                const SizedBox(height: 20),
+                // Horizontal filter row.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildFilterTabs(),
+                ),
+                const SizedBox(height: 12),
+                // Data table for applications.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildDataTable(),
+                ),
+                const SizedBox(height: 30),
+              ],
+            ),
+          ),
+          // Draggable Floating Button for viewing saved programs.
+          Positioned(
+            left: _floatingButtonOffset.dx,
+            top: _floatingButtonOffset.dy,
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                setState(() {
+                  _floatingButtonOffset += details.delta;
+                });
+              },
+              child: FloatingActionButton.extended(
+                backgroundColor: AppColors.darkBlue,
+                label: Text(
+                  "Saved Programs",
+                  style: const TextStyle(color: AppColors.myWhite, fontFamily: 'Product Sans'),
+                ),
+                icon: SvgPicture.asset(
+                  'assets/images/folder.svg',
+                  width: 25,
+                  color: AppColors.myWhite,
+                ),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SavedProgramsScreen()),
+                  );
+                },
               ),
             ),
-            const SizedBox(height: 10),
-            // Analytics card carousel.
-            _buildAnalyticsCarousel(context),
-            const SizedBox(height: 20),
-            // Horizontal filter row.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildFilterTabs(),
-            ),
-            const SizedBox(height: 12),
-            // Data table for applications.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildDataTable(),
-            ),
-            const SizedBox(height: 30),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
