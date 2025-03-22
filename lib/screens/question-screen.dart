@@ -9,7 +9,7 @@ import 'dart:async';
 
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart'; // <-- Import your color constants
-import 'dart:math' as math;
+
 
 // Question Model Class
 class Question {
@@ -251,7 +251,7 @@ class Question {
           correctAnswer: 'And',
         ),
       ];
-    } else if (subjectName == 'Computer Science') {
+    } else if (subjectName == 'Computer') {
       return [
         Question(
           questionText: 'What does CPU stand for?',
