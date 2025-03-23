@@ -1,339 +1,423 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/screens/question-screen.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/Widgets/header.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/animation.dart';
+import 'package:percent_indicator/percent_indicator.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 
+import 'entrytest-screen.dart';
 
-class ResultScreen extends StatefulWidget {
+// Placeholder for the ReviewAnswersScreen.
+// Replace with your actual implementation.
+class ReviewAnswersScreen extends StatelessWidget {
+  const ReviewAnswersScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.darkBlack,
+      appBar: AppBar(
+        backgroundColor: AppColors.darkBlack,
+        elevation: 0,
+        leading: IconButton(
+          icon: SvgPicture.asset(
+            "assets/images/back.svg",
+            color: AppColors.myWhite,
+            height: 30,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text("Review Answers", style: TextStyle(color: AppColors.myWhite)),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Text(
+          "Review Answers Content Here",
+          style: TextStyle(color: AppColors.myWhite, fontSize: 20),
+        ),
+      ),
+    );
+  }
+}
+
+class ResultsScreen extends StatelessWidget {
   final int totalScore;
   final String grade;
   final String subjectName;
 
-  const ResultScreen({
+
+  const ResultsScreen({
     Key? key,
     required this.totalScore,
     required this.grade,
     required this.subjectName,
+
   }) : super(key: key);
 
-  @override
-  _ResultScreenState createState() => _ResultScreenState();
-}
-
-class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-  int _currentIndex = 0;
-  int retakesLeft = 2; // Number of retakes left
-  bool isRetakeEnabled = false; // Whether retake is allowed
-  String retakeMessage = "You have 2 retakes left."; // Retake status message
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: Duration(seconds: 4),
-    );
-
-    _animation = Tween<double>(begin: 0, end: 1).animate(_controller)
-      ..addListener(() {
-        setState(() {});
-      });
-
-    _controller.forward();
-    _checkRetakeStatus(); // Check retake status when the screen loads
+  // Helper to choose dynamic color for the grade letter.
+  Color getGradeColor(String grade) {
+    switch (grade.toUpperCase()) {
+      case "A":
+        return Colors.greenAccent;
+      case "B":
+        return Colors.blueAccent;
+      case "C":
+        return Colors.orangeAccent;
+      case "D":
+        return Colors.yellowAccent;
+      case "F":
+        return Colors.redAccent;
+      default:
+        return Colors.white;
+    }
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  // Check if the user can retake the test
-  Future<void> _checkRetakeStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastRetakeTimestamp = prefs.getInt('lastRetakeTimestamp') ?? 0;
-    final currentTimestamp = DateTime.now().millisecondsSinceEpoch;
-    final cooldownDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-
-    // Check if 24 hours have passed since the last retake
-    if ((currentTimestamp - lastRetakeTimestamp) >= cooldownDuration) {
-      setState(() {
-        isRetakeEnabled = true;
-      });
+  // Helper to choose a performance message based on percentage.
+  String getPerformanceMessage(double percentage) {
+    if (percentage >= 0.8) {
+      return "Excellent performance!";
+    } else if (percentage >= 0.6) {
+      return "Good effort, keep improving!";
     } else {
-      setState(() {
-        isRetakeEnabled = false;
-        retakeMessage = "You can retake the test after 24 hours.";
-      });
+      return "Needs improvement, try harder!";
     }
-
-    // Update the number of retakes left
-    final retakes = prefs.getInt('retakesLeft') ?? 2;
-    setState(() {
-      retakesLeft = retakes;
-      if (retakesLeft <= 0) {
-        retakeMessage = "No retakes left.";
-      }
-    });
-  }
-
-  // Handle retake button press
-  Future<void> _handleRetake() async {
-    if (retakesLeft <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("No retakes left."),
-        ),
-      );
-      return;
-    }
-
-    if (!isRetakeEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("You can retake the test after 24 hours."),
-        ),
-      );
-      return;
-    }
-
-    // Update retake count and timestamp
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('retakesLeft', retakesLeft - 1);
-    await prefs.setInt('lastRetakeTimestamp', DateTime.now().millisecondsSinceEpoch);
-
-    // Navigate back to the question screen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => QuestionScreen(subjectName: widget.subjectName),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    double percentage = (widget.totalScore / 10) * 100;
-
-    String feedback;
-    String suggestion;
-    if (percentage >= 90) {
-      feedback = "Excellent! You have a strong understanding of the subject.";
-      suggestion = "Keep up the good work and explore advanced topics.";
-    } else if (percentage >= 80) {
-      feedback = "Great job! You passed with a good score.";
-      suggestion = "Review the questions you missed to improve further.";
-    } else if (percentage >= 70) {
-      feedback = "Good effort! You passed, but there's room for improvement.";
-      suggestion = "Focus on the areas where you struggled.";
-    } else {
-      feedback = "You didn't pass this time, but don't give up!";
-      suggestion = "Retake the test after reviewing the material.";
-    }
+    // Assuming 10 questions per test.
+    final int totalQuestions = 10;
+    final double percentage = totalScore / totalQuestions;
+    // Format current date and time.
+    final String formattedDate = DateFormat("MMM dd, yyyy  •  hh:mm a").format(DateTime.now());
+    final String performanceMessage = getPerformanceMessage(percentage);
+    final bool showTryAgain = grade.toUpperCase() == "F";
 
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
-      body: Stack(
-        children: [
-          const GuideraHeader(),
-          Positioned(
-            top: 85,
-            left: 25,
-            child: Transform.rotate(
-              angle: 0.0,
-              child: GestureDetector(
-                onTap: () {
-                  // Check if the previous screen is QuestionScreen
-                  if (Navigator.of(context).canPop()) {
-                    Navigator.of(context).pop(); // Go back to the previous screen
-                  } else {
-                    // If QuestionScreen is not in the stack, navigate to it explicitly
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => QuestionScreen(subjectName: widget.subjectName),
-                      ),
-                    );
-                  }
-                },
-                child: SvgPicture.asset(
+      backgroundColor: AppColors.darkBlack,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Stack(
+          children: [
+            const GuideraHeader(),
+            Positioned(
+              top: 70,
+              left: 10,
+              child: IconButton(
+                icon: SvgPicture.asset(
                   "assets/images/back.svg",
+                  color: AppColors.myWhite,
                   height: 30,
-                  colorFilter: ColorFilter.mode(
-                    AppColors.myWhite,
-                    BlendMode.srcIn,
-                  ),
                 ),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const EntryTestScreen(subjectName: '')),
+                  );
+                },
               ),
             ),
-          ),
-          Positioned(
-            top: 74,
-            right: 25,
-            child: CircleAvatar(
-              radius: 21,
-              backgroundImage: NetworkImage(
-                  "https://avatars.githubusercontent.com/u/168419532?v=4"),
-              backgroundColor: AppColors.darkBlue,
+          ],
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Subject Name, Date/Time, User Name and Performance Message.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    subjectName,
+                    style: const TextStyle(
+                      color: AppColors.myWhite,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    formattedDate,
+                    style: const TextStyle(
+                      color: AppColors.myWhite,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  RichText(
+                    text: TextSpan(
+                      text: "",
+                      style: const TextStyle(
+                        color: AppColors.myWhite,
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: performanceMessage,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontStyle: FontStyle.italic,
+                            color: AppColors.myWhite,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                ],
+              ),
             ),
-          ),
-          SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Subject Name Header
-                Padding(
-                  padding: const EdgeInsets.only(top: 170, left: 35, right: 20),
-                  child: Text(
-                    'Result: ${widget.subjectName}',
+
+            Center(
+              // Reduced circular progress indicator.
+              child: CircularPercentIndicator(
+                radius: 120,
+                lineWidth: 12,
+                animation: true,
+                percent: percentage,
+                center: Text(
+                  "${(percentage * 100).toInt()}%",
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.myWhite,
+                  ),
+                ),
+                circularStrokeCap: CircularStrokeCap.round,
+                progressColor: percentage >= 0.6 ? Colors.greenAccent : Colors.redAccent,
+                backgroundColor: Colors.grey.shade800,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Center(
+              // Grade text with dynamic colored grade letter.
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Grade: ",
                     style: TextStyle(
                       color: AppColors.myWhite,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-
-                // Existing Card
-                Padding(
-                  padding: const EdgeInsets.only(top: 10, left: 20, right: 20),
-                  child: Card(
-                    elevation: 10,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    color: AppColors.myWhite,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Hello, Saad!",
-                            style: TextStyle(
-                              color: AppColors.myBlack,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            'Score: ${widget.totalScore}/10',
-                            style: TextStyle(
-                              color: AppColors.myBlack,
-                              fontSize: 18,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            'Grade: ${widget.grade} (${percentage.toStringAsFixed(1)}%)',
-                            style: TextStyle(
-                              color: AppColors.myBlack,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 10),
-                          Text(
-                            'Remarks: $feedback',
-                            style: TextStyle(
-                              color: AppColors.myBlack,
-                              fontSize: 16,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
+                  Text(
+                    grade,
+                    style: TextStyle(
+                      color: getGradeColor(grade),
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
+            // Card for Correct vs Incorrect counts.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Card(
+                color: AppColors.lightBlack,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-
-                // Progress Circle
-                Center(
-                  child: Stack(
-                    alignment: Alignment.center,
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        width: 200,
-                        height: 330,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.lightBlue.withOpacity(0.3),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 210,
-                        height: 210,
-                        child: CircularProgressIndicator(
-                          value: _animation.value,
-                          strokeWidth: 5,
-                          color: AppColors.lightBlue,
-                        ),
-                      ),
-                      Text(
-                        percentage >= 70
-                            ? 'Congratulations\nPassed!'
-                            : 'Failed',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.myWhite,
-                          fontSize: 21,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      _buildDetailItem("Correct", totalScore, Colors.greenAccent),
+                      _buildDetailItem("Incorrect", totalQuestions - totalScore, Colors.redAccent),
                     ],
                   ),
                 ),
-
-                // Retake Button (Only shown if the user failed)
-                if (percentage < 70) // Show retake button only if the user failed
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20),
-                    child: Column(
-                      children: [
-                        Text(
-                          retakeMessage,
-                          style: TextStyle(
-                            color: AppColors.myWhite,
-                            fontSize: 16,
-                          ),
-                        ),
-                        SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _handleRetake,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isRetakeEnabled ? Colors.red : AppColors.darkGray, // Red color for retake button
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            child: Text(
-                              "Retake Test",
-                              style: TextStyle(
-                                color: AppColors.darkBlue,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Separate Card for Performance Chart.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Card(
+                color: AppColors.lightBlack,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: SizedBox(
+                    height: 200,
+                    child: PerformanceChart(
+                      correct: totalScore,
+                      incorrect: totalQuestions - totalScore,
                     ),
                   ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            // Call-to-Action buttons: Review Answers and Try Again.
+        // Determine if "Try Again" should be shown.
+
+
+// Call-to-Action buttons: always show "Review Answers", and show "Try Again" conditionally.
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+
+                if (showTryAgain) ...[
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          // Navigate to the QuestionScreen for the respective subject.
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => QuestionScreen(subjectName: subjectName),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.refresh, color: Colors.white),
+                        label: const Text("Try Again"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.darkBlue,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
+    const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper widget for displaying detail items.
+  Widget _buildDetailItem(String label, int value, Color color) {
+    return Column(
+      children: [
+        Text(
+          "$value",
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            color: AppColors.myWhite,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// PerformanceChart widget using fl_chart to display a simple bar chart.
+class PerformanceChart extends StatelessWidget {
+  final int correct;
+  final int incorrect;
+
+  const PerformanceChart({
+    Key? key,
+    required this.correct,
+    required this.incorrect,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final total = correct + incorrect;
+    return BarChart(
+      BarChartData(
+        maxY: total.toDouble(),
+        barTouchData: BarTouchData(enabled: false),
+        titlesData: FlTitlesData(
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 28,
+              interval: total / 5 > 0 ? total / 5 : 1,
+              getTitlesWidget: (value, meta) {
+                return Text(
+                  value.toInt().toString(),
+                  style: TextStyle(color: AppColors.myWhite, fontSize: 12),
+                );
+              },
+            ),
+          ),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                String title;
+                if (value.toInt() == 0) {
+                  title = "Correct";
+                } else if (value.toInt() == 1) {
+                  title = "Incorrect";
+                } else {
+                  title = "";
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    title,
+                    style: TextStyle(color: AppColors.myWhite, fontSize: 12),
+                  ),
+                );
+              },
+              reservedSize: 30,
+            ),
+          ),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        borderData: FlBorderData(show: false),
+        gridData: FlGridData(show: false),
+        barGroups: [
+          BarChartGroupData(
+            x: 0,
+            barRods: [
+              BarChartRodData(
+                toY: correct.toDouble(),
+                color: Colors.greenAccent,
+                width: 22,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ],
+          ),
+          BarChartGroupData(
+            x: 1,
+            barRods: [
+              BarChartRodData(
+                toY: incorrect.toDouble(),
+                color: Colors.redAccent,
+                width: 22,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ],
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:guidera_app/screens/analytics_screen.dart';
+import 'package:guidera_app/screens/entrytest-screen.dart';
 import 'package:guidera_app/screens/splash_screen.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:guidera_app/screens/saved_programs_screen.dart';
