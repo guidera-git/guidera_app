@@ -120,7 +120,7 @@ class Question {
         ),
         Question(
           questionText:
-              'Which gas is responsible for the smell of rotten eggs?',
+          'Which gas is responsible for the smell of rotten eggs?',
           options: ['Oxygen', 'Hydrogen sulfide', 'Carbon dioxide'],
           correctAnswer: 'Hydrogen sulfide',
         ),
@@ -144,7 +144,7 @@ class Question {
         ),
         Question(
           questionText:
-              'Which law states that every action has an equal and opposite reaction?',
+          'Which law states that every action has an equal and opposite reaction?',
           options: [
             'Newton\'s 1st Law',
             'Newton\'s 2nd Law',
@@ -164,7 +164,7 @@ class Question {
         ),
         Question(
           questionText:
-              'Which device converts mechanical energy into electrical energy?',
+          'Which device converts mechanical energy into electrical energy?',
           options: ['Motor', 'Generator', 'Transformer'],
           correctAnswer: 'Generator',
         ),
@@ -288,7 +288,7 @@ class Question {
         ),
         Question(
           questionText:
-              'Which protocol is used for secure communication over the internet?',
+          'Which protocol is used for secure communication over the internet?',
           options: ['HTTP', 'HTTPS', 'FTP'],
           correctAnswer: 'HTTPS',
         ),
@@ -309,7 +309,7 @@ class Question {
         ),
         Question(
           questionText:
-              'Which programming language is known as the "mother of all languages"?',
+          'Which programming language is known as the "mother of all languages"?',
           options: ['C', 'Java', 'Python'],
           correctAnswer: 'C',
         ),
@@ -348,8 +348,8 @@ class QuestionProvider extends ChangeNotifier {
   void selectAnswer(int index, String selectedOption) {
     questions[index].selectedOption = selectedOption;
     progress = ((questions.where((q) => q.selectedOption != null).length /
-                questions.length) *
-            100)
+        questions.length) *
+        100)
         .toInt();
     notifyListeners();
   }
@@ -439,7 +439,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
               return Center(child: CircularProgressIndicator());
             }
             bool allQuestionsAttempted =
-                provider.questions.every((q) => q.selectedOption != null);
+            provider.questions.every((q) => q.selectedOption != null);
             bool isSubmitEnabled = allQuestionsAttempted && isChecked;
 
             return Stack(
@@ -493,7 +493,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                 final question = provider.questions[index];
                                 return Container(
                                   width:
-                                      MediaQuery.of(context).size.width * 0.001,
+                                  MediaQuery.of(context).size.width * 0.001,
                                   padding: const EdgeInsets.only(right: 17.0),
                                   // Decrease width to 90% of screen width
                                   alignment: Alignment.centerLeft,
@@ -508,7 +508,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                       padding: const EdgeInsets.all(12.0),
                                       child: Column(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             'Q${index + 1}. ${question.questionText}',
@@ -521,7 +521,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                             return RadioListTile<String>(
                                               value: option,
                                               groupValue:
-                                                  question.selectedOption,
+                                              question.selectedOption,
                                               onChanged: (value) {
                                                 provider.selectAnswer(
                                                     index, value!);
@@ -531,7 +531,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                                 style: TextStyle(
                                                   color: AppColors.myWhite,
                                                   fontSize:
-                                                      15, // Decrease font size for MCQ options
+                                                  15, // Decrease font size for MCQ options
                                                 ),
                                               ),
                                               activeColor: AppColors.lightBlue,
@@ -590,7 +590,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                         Navigator.pushReplacement(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => ResultScreen(
+                                            builder: (context) => ResultsScreen(
                                               totalScore: totalScore, // Pass actual score
                                               grade: grade, // Pass actual grade
                                               subjectName: widget.subjectName, // Pass selected subject
@@ -677,8 +677,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
                       double circleY = trackHeight * provider.sliderPosition;
                       circleY = circleY.clamp(0.0, trackHeight - 20);
                       int questionIndex = ((provider.scrollController.offset /
-                                  provider.questionWidgetHeight)
-                              .round())
+                          provider.questionWidgetHeight)
+                          .round())
                           .clamp(0, provider.questions.length - 1)
                           .toInt();
                       return Stack(
