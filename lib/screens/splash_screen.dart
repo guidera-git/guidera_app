@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:guidera_app/screens/home_screen.dart';
 import 'package:guidera_app/screens/login-signup.dart';
-import 'package:guidera_app/theme/app_colors.dart'; // <-- Import your custom colors
+import 'package:guidera_app/theme/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -21,6 +22,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late AnimationController _lineController;
   late Animation<double> _lineAnimation;
 
+  // Storage for our JWT
+  final _storage = const FlutterSecureStorage();
+
   @override
   void initState() {
     super.initState();
@@ -30,11 +34,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       vsync: this,
       duration: const Duration(seconds: 5),
     );
-
     _hatAnimation = Tween<double>(begin: -200, end: 0).animate(
       CurvedAnimation(parent: _hatController, curve: Curves.bounceOut),
     );
-
     _hatController.forward();
 
     // Fade Animation
@@ -42,11 +44,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       vsync: this,
       duration: const Duration(seconds: 5),
     );
-
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
     );
-
     _fadeController.forward();
 
     // Line Filling Animation
@@ -54,19 +54,26 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       vsync: this,
       duration: const Duration(seconds: 5),
     );
-
     _lineAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _lineController, curve: Curves.easeInOut),
     );
-
     _lineController.forward();
 
-    //Navigate to Home after 3 seconds
-    Timer(const Duration(seconds: 5), () {
+    // After animations, decide where to go
+    Timer(const Duration(seconds: 5), _checkAuthAndNavigate);
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    final token = await _storage.read(key: 'token');
+    if (token != null && token.isNotEmpty) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginSignup()),
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
-    });
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginSignup()),
+      );
+    }
   }
 
   @override
@@ -80,20 +87,14 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    // Background: myBlack in dark mode, myWhite in light mode
     final Color backgroundColor =
     isDarkMode ? AppColors.myBlack : AppColors.myWhite;
-
-    // Text color for "uidera": myWhite in dark mode, myBlack in light mode
     final Color guideraTextColor =
     isDarkMode ? AppColors.myWhite : AppColors.myBlack;
-
-    // Hat color: darkBlue in dark mode, myBlack in light mode
-    final Color hatColor = isDarkMode ? AppColors.lightBlue : AppColors.myBlack;
-
-    // Line color: myWhite in dark mode, myBlack in light mode
-    final Color lineColor = isDarkMode ? AppColors.myWhite : AppColors.myBlack;
+    final Color hatColor =
+    isDarkMode ? AppColors.lightBlue : AppColors.myBlack;
+    final Color lineColor =
+    isDarkMode ? AppColors.myWhite : AppColors.myBlack;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -113,7 +114,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         fontSize: 50,
                         fontFamily: "ProductSans",
                         fontWeight: FontWeight.bold,
-                        color: AppColors.lightBlue, // Always lightBlue for "G"
+                        color: AppColors.lightBlue,
                       ),
                     ),
                     TextSpan(
@@ -122,7 +123,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                         fontSize: 40,
                         fontFamily: "ProductSans",
                         fontWeight: FontWeight.bold,
-                        color: guideraTextColor, // White in dark mode, black in light
+                        color: guideraTextColor,
                       ),
                     ),
                   ],
@@ -138,12 +139,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   top: MediaQuery.of(context).size.height * 0.42 - 22 + _hatAnimation.value,
                   left: MediaQuery.of(context).size.width * 0.28 - 19,
                   child: Transform.rotate(
-                    angle: -0.5, // Tilt angle in radians (~ -28.6 degrees)
+                    angle: -0.5,
                     child: SvgPicture.asset(
                       "assets/images/hat.svg",
                       height: 40,
                       colorFilter: ColorFilter.mode(
-                        hatColor, // darkBlue in dark mode, black in light
+                        hatColor,
                         BlendMode.srcIn,
                       ),
                     ),
@@ -161,12 +162,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   child: ClipRect(
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      widthFactor: _lineAnimation.value, // Animate the width
+                      widthFactor: _lineAnimation.value,
                       child: SvgPicture.asset(
                         "assets/images/line.svg",
-                        width: 185, // Enough to cover the whole text
+                        width: 185,
                         colorFilter: ColorFilter.mode(
-                          lineColor, // myWhite in dark mode, myBlack in light
+                          lineColor,
                           BlendMode.srcIn,
                         ),
                       ),
@@ -176,10 +177,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               },
             ),
 
-            // Fade Animation (Optional: apply to entire Stack or specific widgets)
+            // Fade Animation (Optional overlay)
             FadeTransition(
               opacity: _fadeAnimation,
-              child: Container(), // Replace with the widget you want to fade
+              child: Container(),
             ),
           ],
         ),

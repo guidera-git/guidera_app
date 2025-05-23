@@ -112,10 +112,10 @@ class ResultsScreen extends StatelessWidget {
                   height: 30,
                 ),
                 onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const EntryTestScreen(subjectName: '')),
-                  );
+                  // Navigator.pushReplacement(
+                  //   context,
+                  //   MaterialPageRoute(builder: (_) => const EntryTestScreen(subjectName: '')),
+                  // );
                 },
               ),
             ),

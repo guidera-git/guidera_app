@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../services/api_service.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
@@ -35,9 +37,10 @@ class _DrawerItem {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-
-  // Track the selected item in the drawer for highlighting.
   int _selectedDrawerIndex = 0;
+  final _api = ApiService();
+  Map<String, dynamic>? profile;
+  bool _loadingProfile = true;
 
   // Define the drawer items with text and corresponding SVG paths.
   final List<_DrawerItem> _drawerItems = [
@@ -71,69 +74,60 @@ class _HomeScreenState extends State<HomeScreen> {
     {'circle': AppColors.darkBlue, 'icon': AppColors.myWhite},
   ];
 
-  late final List<Widget> _screens;
-
   @override
   void initState() {
     super.initState();
-    // Updated _screens with an additional NotificationScreen.
-    _screens = [
-      HomeTab(
-        cardGradients: _cardGradients,
-        titleCardColors: _titleCardColors,
-        circleColors: _circleColors,
-      ),
-      const UniversitySearchScreen(),
-      const UserProfileScreen(),
-      const NotificationScreen(),
-    ];
+    _loadProfile();
   }
 
-  // Handle drawer item taps:
-  //  - For "Home" (index 0), set _currentIndex=0 to show the Home tab.
-  //  - For others, push their respective screens.
+  Future<void> _loadProfile() async {
+    final resp = await _api.getProfile();
+    if (resp.statusCode == 200) {
+      setState(() {
+        profile = jsonDecode(resp.body);
+        _loadingProfile = false;
+      });
+    } else {
+      setState(() => _loadingProfile = false);
+    }
+  }
+
+  Widget _buildAvatar({double radius = 24}) {
+    if (_loadingProfile) {
+      return CircleAvatar(radius: radius, child: CircularProgressIndicator(strokeWidth: 2));
+    }
+    final photoUrl = profile?['profilephoto'] as String?;
+    if (photoUrl != null && photoUrl.isNotEmpty) {
+      return CircleAvatar(radius: radius, backgroundImage: NetworkImage(photoUrl));
+    }
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: Colors.transparent,
+      child: SvgPicture.asset('assets/images/default_avatar.svg', width: radius * 2, height: radius * 2),
+    );
+  }
+
   void _handleDrawerNavigation(int index) {
-    Navigator.pop(context); // Close the drawer
+    Navigator.pop(context);
     setState(() {
       _selectedDrawerIndex = index;
+      if (index == 0) _currentIndex = 0;
     });
-
     switch (index) {
-      case 0:
-      // Home
-        setState(() {
-          _currentIndex = 0;
-        });
-        break;
       case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => AboutGuideraScreen()),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => AboutGuideraScreen()));
         break;
       case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const PrivacyScreen()),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyScreen()));
         break;
       case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const SettingsScreen()),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
         break;
       case 4:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const HelpSupportScreen()),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen()));
         break;
       case 5:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const RateShareSocialScreen()),
-        );
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const RateShareSocialScreen()));
         break;
     }
   }
@@ -143,8 +137,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color backgroundColor = isDarkMode ? AppColors.myBlack : AppColors.myWhite;
 
-    // Bottom navigation items.
-    final List<FancyNavItem> items = [
+    // Build screens here so profile updates reflect immediately.
+    final _screens = [
+      HomeTab(
+        cardGradients: _cardGradients,
+        titleCardColors: _titleCardColors,
+        circleColors: _circleColors,
+        profile: profile,
+        loading: _loadingProfile,
+      ),
+      const UniversitySearchScreen(),
+      const UserProfileScreen(),
+      const NotificationScreen(),
+    ];
+
+    final items = [
       FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
       FancyNavItem(label: "Search", svgPath: "assets/images/search.svg"),
       FancyNavItem(label: "Profile", svgPath: "assets/images/profile.svg"),
@@ -153,74 +160,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return WillPopScope(
       onWillPop: () async {
-        // If the user is not on Home, back returns to Home instead of exiting the app.
         if (_currentIndex != 0) {
-          setState(() {
-            _currentIndex = 0;
-          });
+          setState(() => _currentIndex = 0);
           return false;
         }
         return true;
       },
       child: Scaffold(
-        backgroundColor: AppColors.myBlack,
-        // Professional Drawer
+        backgroundColor: backgroundColor,
         drawer: Drawer(
           backgroundColor: AppColors.myBlack,
           width: 260,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // HEADER with avatar, name, email
               Container(
-                color: AppColors.myBlack,
                 padding: const EdgeInsets.only(top: 62, left: 26, bottom: 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Circular Avatar
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundImage: NetworkImage(
-                        "https://avatars.githubusercontent.com/u/168419532?v=4",
-                      ),
-                    ),
+                    _buildAvatar(),
                     const SizedBox(height: 16),
-                    // Name + Email
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Saad",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.myWhite,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          "saad@example.com",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.myGray,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      profile?['fullname']?.split(' ').first ?? 'Guest',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.myWhite),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      profile?['email'] ?? 'guest@gmail.com',
+                      style: const TextStyle(fontSize: 14, color: AppColors.myGray),
                     ),
                   ],
                 ),
               ),
-              // Divider
               const Divider(color: AppColors.myGray, thickness: 1, height: 0),
-              // DRAWER ITEMS
               Expanded(
                 child: ListView.builder(
                   itemCount: _drawerItems.length,
                   itemBuilder: (context, index) {
                     final item = _drawerItems[index];
                     final isSelected = _selectedDrawerIndex == index;
-
                     return InkWell(
                       onTap: () => _handleDrawerNavigation(index),
                       child: Container(
@@ -253,8 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-
-        // Only load header for Home tab. Other tabs should render their own header inside their screen.
         appBar: _currentIndex == 0
             ? PreferredSize(
           preferredSize: const Size.fromHeight(120),
@@ -263,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const GuideraHeader(),
                 Positioned(
-                  top: 75, // Adjust this value to lower the icon as desired
+                  top: 75,
                   left: 10,
                   child: IconButton(
                     icon: const Icon(Icons.menu, color: AppColors.myWhite),
@@ -275,7 +252,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         )
             : null,
-
         body: _screens[_currentIndex],
         bottomNavigationBar: GuideraBottomNavBar(
           items: items,
@@ -292,12 +268,16 @@ class HomeTab extends StatelessWidget {
   final List<LinearGradient> cardGradients;
   final List<Color> titleCardColors;
   final List<Map<String, Color>> circleColors;
+  final Map<String, dynamic>? profile;
+  final bool loading;
 
   const HomeTab({
     Key? key,
     required this.cardGradients,
     required this.titleCardColors,
     required this.circleColors,
+    required this.profile,
+    required this.loading,
   }) : super(key: key);
 
   @override
@@ -308,11 +288,40 @@ class HomeTab extends StatelessWidget {
       {"event": "NUST - Application", "date": "April 05, 2025"},
     ];
 
+    // Use same keys as drawer: 'fulllname' and 'profilephoto'
+    final String displayName;
+    if (loading) {
+      displayName = 'Loading…';
+    } else {
+      displayName = profile?['fullname']?.split(' ').first.trim() ?? 'Guest';
+    }
+
+    // Decide how to show the avatar
+    Widget avatar;
+    if (loading) {
+      avatar = const CircleAvatar(radius: 25, child: CircularProgressIndicator());
+    } else {
+      final String? url = profile?['profilephoto'] as String?;
+      if (url != null && url.isNotEmpty) {
+        avatar = CircleAvatar(radius: 25, backgroundImage: NetworkImage(url));
+      } else {
+        avatar = CircleAvatar(
+          radius: 25,
+          backgroundColor: Colors.transparent,
+          child: SvgPicture.asset(
+            'assets/images/default_avatar.svg',
+            width: 48,
+            height: 48,
+          ),
+        );
+      }
+    }
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting section with a profile avatar.
+          // Greeting section
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -322,15 +331,15 @@ class HomeTab extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Hello, Saad!",
-                      style: TextStyle(
+                      displayName,
+                      style: const TextStyle(
                         color: AppColors.myWhite,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 5),
-                    Text(
+                    const Text(
                       "Welcome to Guidera",
                       style: TextStyle(
                         color: AppColors.myGray,
@@ -340,30 +349,23 @@ class HomeTab extends StatelessWidget {
                   ],
                 ),
               ),
-              // The profile avatar also allows navigation to the profile screen.
+              // Avatar tappable
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: InkWell(
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const UserProfileScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const UserProfileScreen()),
                     );
                   },
                   borderRadius: BorderRadius.circular(25),
-                  child: CircleAvatar(
-                    radius: 25,
-                    backgroundImage: NetworkImage(
-                      "https://avatars.githubusercontent.com/u/168419532?v=4",
-                    ),
-                    backgroundColor: AppColors.darkBlue,
-                  ),
+                  child: avatar,
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 30),
           // Info carousel card shows dynamic info like last login and deadlines.
           InfoCarouselCard(
@@ -433,7 +435,6 @@ class HomeTab extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16.0),
           onTap: () {
-            // Based on the tile tapped, push the corresponding screen.
             switch (index) {
               case 0:
                 Navigator.push(
@@ -472,7 +473,6 @@ class HomeTab extends StatelessWidget {
           },
           child: Stack(
             children: [
-              // Title card at the top-left.
               Positioned(
                 top: 12,
                 left: 12,
@@ -492,7 +492,6 @@ class HomeTab extends StatelessWidget {
                   ),
                 ),
               ),
-              // Circular button at the bottom-left.
               Positioned(
                 bottom: 12,
                 left: 12,
@@ -522,7 +521,6 @@ class HomeTab extends StatelessWidget {
                   ),
                 ),
               ),
-              // Main icon at the bottom-right.
               Positioned(
                 bottom: 12,
                 right: 12,
@@ -590,7 +588,6 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
       ),
       child: Stack(
         children: [
-          // A PageView for the different info slides.
           Column(
             children: [
               Expanded(
@@ -602,7 +599,6 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                     });
                   },
                   children: [
-                    // Slide 1: Last Login Info.
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
@@ -628,7 +624,6 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                         ],
                       ),
                     ),
-                    // Slide 2: Upcoming Deadlines.
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
@@ -659,7 +654,6 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                         ],
                       ),
                     ),
-                    // Slide 3: Profile Completion (Quick Stats).
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
@@ -695,7 +689,6 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Dot indicators for the carousel.
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(3, (index) {

@@ -1,9 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import '../Widgets/header.dart';
+import '../services/api_service.dart';
 import 'login-signup.dart';
 import 'login.dart';
+import 'package:http/http.dart' as http;
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);
@@ -19,6 +23,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _api         = ApiService();
   final TextEditingController _confirmPasswordController =
   TextEditingController();
 
@@ -31,9 +36,31 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  void _signUp() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Implement your sign up logic here
+  Future<void> signup() async {
+    final response = await _api.post(
+      '/auth/signup',
+      {
+        'fullName': _nameController.text.trim(),
+        'email':    _emailController.text.trim(),
+        'password': _passwordController.text,
+      },
+    );
+
+    debugPrint('Signup status: ${response.statusCode}');
+    debugPrint('Signup body:   ${response.body}');
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 201) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Signup successful!')),
+      );
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data['error'] ?? 'Signup failed')),
+      );
     }
   }
 
@@ -222,7 +249,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                        onPressed: _signUp,
+                        onPressed: signup,
                         child: const Text(
                           "Sign Up",
                           style: TextStyle(

@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:guidera_app/screens/saved_programs_screen.dart';
 import 'package:guidera_app/theme/theme.dart';
 
+
 void main() {
   runApp(
     const ProviderScope(
@@ -25,7 +26,7 @@ class GuideraApp extends StatelessWidget {
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: ThemeMode.system, // Auto-switch between light/dark mode
-      home: const SplashScreen(),
+      home: SplashScreen(),
     );
   }
 }
