@@ -4,7 +4,14 @@ import 'package:guidera_app/screens/home_screen.dart';
 import 'package:guidera_app/screens/signup.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import '../Widgets/header.dart';
+import '../services/api_service.dart';
 import 'login-signup.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
+
+
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -19,6 +26,8 @@ class _LoginScreenState extends State<LoginScreen> {
   // Controllers for the input fields.
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _api         = ApiService();
+  final _storage = FlutterSecureStorage();
 
   @override
   void dispose() {
@@ -28,15 +37,30 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      // TODO: Add your authentication logic here.
-      // If login is successful, navigate to the HomeScreen.
+  Future<void> login() async {
+    final response = await _api.post(
+      '/auth/login',
+      {
+        'email':    _emailController.text.trim(),
+        'password': _passwordController.text,
+      },
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      await _storage.write(key: 'token', value: data['token']);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login successful!')),
+      );
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(builder: (context) => const HomeScreen()));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data['error'] ?? 'Login failed')),
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                        onPressed: _login,
+                        onPressed: login,
                         child: const Text(
                           "Log in",
                           style: TextStyle(

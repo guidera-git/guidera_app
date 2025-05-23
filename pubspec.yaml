@@ -50,6 +50,8 @@ dependencies:
   carousel_slider: ^5.0.0
   percent_indicator: ^4.2.2
   fl_chart: ^0.70.2
+  http: ^1.4.0           # Lightweight HTTP client
+  flutter_secure_storage: ^9.0.0   # for storing JWT safely
 
 
   # The following adds the Cupertino Icons font to your application.
