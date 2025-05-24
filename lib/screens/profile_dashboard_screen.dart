@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:guidera_app/screens/user_form.dart';
+import 'package:http/http.dart' as _secureStorage;
+import 'package:guidera_app/services/api_service.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:intl/intl.dart';
 
 import '../Widgets/header.dart';
 import 'home_screen.dart';
@@ -13,465 +17,481 @@ import 'login-signup.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({Key? key}) : super(key: key);
+
   @override
   _UserProfileScreenState createState() => _UserProfileScreenState();
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  File? _profileImage;
-  File? _backgroundImage;
+  final ApiService _api = ApiService();
   final ImagePicker _picker = ImagePicker();
-  double _profileCompletionPercentage = 80.0; // For demo purposes
-  Timer? _timer; // Timer to schedule notifications
+
+  String? fullName;
+  String email = '';
+  String? _gender;
+  DateTime? _birthdate;
+  String? _aboutMe;
+  String? _profilePhotoUrl;
+  String? _backgroundPhotoUrl;
+  File? _pickedProfile;
+  File? _pickedBackground;
+  bool _loading = true;
+  bool _picking = false;
+  final _secureStorage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
-    // Schedule the overlay notification every 30 seconds.
-    _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      if (mounted) {
-        _showProfileCompletionNotification();
-      }
-    });
+    _fetchProfile();
   }
 
-  // Insert a custom overlay entry that slides from the top.
-  void _showProfileCompletionNotification() {
-    OverlayEntry? overlayEntry;
-    overlayEntry = OverlayEntry(
-      builder: (context) => CustomNotification(
-        profileCompletion: _profileCompletionPercentage.toInt(),
-        onClose: () {
-          overlayEntry?.remove();
-        },
-      ),
-    );
-    Overlay.of(context)?.insert(overlayEntry);
+  Future<void> _fetchProfile() async {
+    try {
+      final response = await _api.getProfile();
+      final data = jsonDecode(response.body);
+      setState(() {
+        fullName = data['fullname'];
+        email = data['email'];
+        _gender = data['gender'];
+        _birthdate = data['birthdate'] != null ? DateTime.parse(data['birthdate']) : null;
+        _aboutMe = data['aboutme'];
+        _profilePhotoUrl = data['profilephoto'];
+        _backgroundPhotoUrl = data['backgroundphoto'];
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() => _loading = false);
+    }
   }
 
-  // Request permission and pick profile image from gallery.
+  Future<void> _updateField(Map<String, dynamic> data) async {
+    await _api.updateProfile(data);
+  }
+
+  Future<void> _updateImageOnServer(File file, bool isProfile) async {
+    final resp = isProfile
+        ? await _api.uploadProfilePhoto(file)
+        : await _api.uploadBackgroundPhoto(file);
+    if (resp.statusCode == 200) {
+      final body = jsonDecode(resp.body);
+      setState(() {
+        if (isProfile) {
+          _profilePhotoUrl = body['profilephoto'];
+        } else {
+          _backgroundPhotoUrl = body['backgroundphoto'];
+        }
+      });
+    }
+  }
+
+  Future<void> _deleteProfilePhoto() async {
+    final resp = await _api.deleteProfilePhoto();
+    if (resp.statusCode == 200) {
+      setState(() {
+        _profilePhotoUrl = null;
+        _pickedProfile = null;
+      });
+    }
+  }
+
   Future<void> _pickProfileImage() async {
-    var permissionStatus = await Permission.photos.request();
-    if (permissionStatus.isGranted) {
-      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) {
-        setState(() {
-          _profileImage = File(pickedFile.path);
-        });
-      }
-    } else {
-      debugPrint("Photo permission not granted for profile image.");
+    final status = await Permission.photos.request();
+    if (!status.isGranted) return;
+
+    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _picking = true);
+      _pickedProfile = File(picked.path);
+      await _updateImageOnServer(_pickedProfile!, true);
+      setState(() => _picking = false);
     }
   }
 
-  // Request permission and pick background image from gallery.
   Future<void> _pickBackgroundImage() async {
-    var permissionStatus = await Permission.photos.request();
-    if (permissionStatus.isGranted) {
-      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-      if (pickedFile != null) {
-        setState(() {
-          _backgroundImage = File(pickedFile.path);
-        });
-      }
-    } else {
-      debugPrint("Photo permission not granted for background image.");
+    final status = await Permission.photos.request();
+    if (!status.isGranted) return;
+
+    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _picking = true);
+      _pickedBackground = File(picked.path);
+      await _updateImageOnServer(_pickedBackground!, false);
+      setState(() => _picking = false);
     }
   }
 
-  @override
-  void dispose() {
-    // Cancel the timer when disposing the widget.
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.myBlack,
-      // Custom AppBar using GuideraHeader with a back button.
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120),
-        child: Stack(
-          children: [
-            const GuideraHeader(),
-            Positioned(
-              top: 70,
-              left: 10,
-              child: IconButton(
-                icon: SvgPicture.asset(
-                  "assets/images/back.svg",
-                  color: AppColors.myWhite,
-                  height: 30,
-                ),
-                onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  } else {
-                    // Fallback: navigate to a default screen (e.g., HomeScreen)
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                    );
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 15),
-            // Background and profile picture combined into one Stack.
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(
-                  height: 150,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppColors.darkBlue,
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(30),
-                      bottomRight: Radius.circular(30),
-                    ),
-                    image: _backgroundImage != null
-                        ? DecorationImage(
-                      image: FileImage(_backgroundImage!),
-                      fit: BoxFit.cover,
-                    )
-                        : null,
-                  ),
-                ),
-                // Background image edit icon
-                Positioned(
-                  bottom: 10,
-                  right: 10,
-                  child: GestureDetector(
-                    onTap: _pickBackgroundImage,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.black54,
-                        shape: BoxShape.circle,
-                      ),
-                      padding: const EdgeInsets.all(6),
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-                // Circular DP overlapping the bottom edge of the background.
-                Positioned(
-                  bottom: -50,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: AppColors.lightBlack,
-                          backgroundImage: _profileImage != null
-                              ? FileImage(_profileImage!)
-                              : const AssetImage('assets/images/user_profile.jpg')
-                          as ImageProvider,
-                        ),
-                        // DP edit icon
-                        Positioned(
-                          bottom: -5,
-                          right: -5,
-                          child: GestureDetector(
-                            onTap: _pickProfileImage,
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.green,
-                                shape: BoxShape.circle,
-                              ),
-                              padding: const EdgeInsets.all(6),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 60), // Space to account for overlap.
-            // User Name.
-            Text(
-              "Saad Mahmood",
-              style: TextStyle(
-                color: AppColors.myWhite,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 5),
-            // User Email.
-            Text(
-              "saad.mhmoood@gmail.com",
-              style: TextStyle(
-                color: AppColors.myGray,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 30),
-            // Profile Details Section.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                children: [
-                  _buildProfileDetailItem(
-                    icon: Icons.person,
-                    title: "Gender",
-                    value: "Male",
-                  ),
-                  const Divider(color: AppColors.lightBlack, thickness: 1),
-                  _buildProfileDetailItem(
-                    icon: Icons.calendar_today,
-                    title: "Birthdate",
-                    value: "January 1, 2000",
-                  ),
-                  const Divider(color: AppColors.lightBlack, thickness: 1),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-            // About Me Section.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "About Me",
-                    style: TextStyle(
-                      color: AppColors.myWhite,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "A motivated student pursuing software engineering with a passion for technology, research, and continuous learning. Eager to explore opportunities in data science, machine learning, and AI.",
-                    style: TextStyle(
-                      color: AppColors.myGray,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-            // Edit Info Button.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.edit, color: AppColors.myWhite),
-                  label: const Text(
-                    "Edit Info",
-                    style: TextStyle(
-                      color: AppColors.myWhite,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.darkBlue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const ProfileCompletionScreen()),
-                    );
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Logout Button.
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.logout, color: AppColors.myWhite),
-                  label: const Text(
-                    "Log Out",
-                    style: TextStyle(
-                      color: AppColors.myWhite,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.darkBlue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const LoginSignup()),
-                    );
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(height: 30),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Helper method to build each profile detail row.
-  Widget _buildProfileDetailItem({
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10.0),
-      child: Row(
+  void _showProfileImageOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.lightBlack,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: AppColors.darkBlue, size: 24),
-          const SizedBox(width: 10),
-          Text(
-            "$title:",
-            style: const TextStyle(
-              color: AppColors.myWhite,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+          ListTile(
+            leading: const Icon(Icons.visibility, color: AppColors.myWhite),
+            title: const Text('View', style: TextStyle(color: AppColors.myWhite)),
+            onTap: () {
+              Navigator.pop(context);
+              _showFullScreenImage();
+            },
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                color: AppColors.myGray,
-                fontSize: 16,
-              ),
-            ),
+          ListTile(
+            leading: const Icon(Icons.edit, color: AppColors.myWhite),
+            title: const Text('Edit', style: TextStyle(color: AppColors.myWhite)),
+            onTap: () {
+              Navigator.pop(context);
+              _pickProfileImage();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete, color: Colors.red),
+            title: const Text('Delete', style: TextStyle(color: Colors.red)),
+            onTap: () {
+              Navigator.pop(context);
+              _deleteProfilePhoto();
+            },
           ),
         ],
       ),
     );
   }
-}
 
-// Custom overlay notification widget that slides in from the top.
-class CustomNotification extends StatefulWidget {
-  final int profileCompletion;
-  final VoidCallback onClose;
+  void _showFullScreenImage() {
+    final profileImage = _pickedProfile != null
+        ? FileImage(_pickedProfile!)
+        : (_profilePhotoUrl != null
+        ? NetworkImage(_profilePhotoUrl!)
+        : const AssetImage('assets/images/default_avatar.jpg')) as ImageProvider;
 
-  const CustomNotification({
-    Key? key,
-    required this.profileCompletion,
-    required this.onClose,
-  }) : super(key: key);
-
-  @override
-  _CustomNotificationState createState() => _CustomNotificationState();
-}
-
-class _CustomNotificationState extends State<CustomNotification>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Offset> _offsetAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    // Animation controller for slide transition.
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _offsetAnimation = Tween<Offset>(
-      begin: const Offset(0, -1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
-    _controller.forward();
-
-    // Auto-dismiss after 10 seconds.
-    Future.delayed(const Duration(seconds: 10), () {
-      widget.onClose();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      // Position it below the status bar.
-      top: MediaQuery.of(context).padding.top + 10,
-      left: 20,
-      right: 20,
-      child: SlideTransition(
-        position: _offsetAnimation,
-        child: Material(
-          color: Colors.transparent,
-          child: GestureDetector(
-            // Dismiss on tap.
-            onTap: widget.onClose,
-            child: Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.info, color: Colors.white),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "Profile Completion: ${widget.profileCompletion}%",
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: widget.onClose,
-                  ),
-                ],
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(0),
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.height,
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: profileImage,
+                fit: BoxFit.contain,
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Future<void> _logout() async {
+    await _secureStorage.delete(key: 'token');
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginSignup()),
+          (route) => false,
+    );
+  }
+
+  Widget _imageEditButton(Future<void> Function() onTap) {
+    return GestureDetector(
+      onTap: _picking ? null : onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: Colors.black54,
+          shape: BoxShape.circle,
+        ),
+        padding: const EdgeInsets.all(6),
+        child: const Icon(
+          Icons.camera_alt,
+          color: Colors.white,
+          size: 20,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.myBlack,
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(120),
+          child: Stack(
+            children: [
+              const GuideraHeader(),
+              Positioned(
+                top: 70,
+                left: 10,
+                child: IconButton(
+                  icon: SvgPicture.asset(
+                    'assets/images/back.svg',
+                    color: AppColors.myWhite,
+                    height: 30,
+                  ),
+                  onPressed: () => Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 15),
+                    _buildHeaderImages(),
+                    const SizedBox(height: 60),
+                    Text(
+                      fullName ?? 'No Name',
+                      style: const TextStyle(
+                        color: AppColors.myWhite,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      email,
+                      style: const TextStyle(
+                        color: AppColors.myGray,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    _buildDetailsSection(),
+                    const SizedBox(height: 30),
+                    _buildAboutMe(),
+                    const SizedBox(height: 30),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30.0),
+              child: _buildLogoutButton(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderImages() {
+    final background = _pickedBackground != null
+        ? FileImage(_pickedBackground!)
+        : (_backgroundPhotoUrl != null
+        ? NetworkImage(_backgroundPhotoUrl!)
+        : const AssetImage('assets/images/default_background.jpg')) as ImageProvider;
+
+    final profile = _pickedProfile != null
+        ? FileImage(_pickedProfile!)
+        : (_profilePhotoUrl != null
+        ? NetworkImage(_profilePhotoUrl!)
+        : const AssetImage('assets/images/default_avatar.jpg')) as ImageProvider;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          height: 150,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.darkBlue,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(30),
+              bottomRight: Radius.circular(30),
+            ),
+            image: DecorationImage(image: background, fit: BoxFit.cover),
+          ),
+        ),
+        Positioned(
+          bottom: 10,
+          right: 10,
+          child: _imageEditButton(_pickBackgroundImage),
+        ),
+        Positioned(
+          bottom: -50,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: GestureDetector(
+              onTap: _showProfileImageOptions,
+              child: SizedBox(
+                width: 100,
+                height: 100,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundColor: AppColors.lightBlack,
+                  backgroundImage: profile,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Column(
+        children: [
+          _buildProfileDetailItem(
+              icon: Icons.person, title: 'Gender', value: _gender ?? 'Select', editable: true, onTap: _selectGender),
+          const Divider(color: AppColors.lightBlack, thickness: 1),
+          _buildProfileDetailItem(
+            icon: Icons.calendar_today,
+            title: 'Birthdate',
+            value: _birthdate != null ? DateFormat('dd MMMM, yyyy').format(_birthdate!) : 'Select',
+            editable: true,
+            onTap: _selectBirthdate,
+          ),
+          const Divider(color: AppColors.lightBlack, thickness: 1),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutMe() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('About Me', style: TextStyle(color: AppColors.myWhite, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: _editAboutMe,
+            child: Text(_aboutMe ?? 'Tell us about yourself', style: const TextStyle(color: AppColors.myGray, fontSize: 16)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.logout, color: AppColors.myWhite),
+        label: const Text('Log Out', style: TextStyle(color: AppColors.myWhite, fontSize: 18, fontWeight: FontWeight.bold)),
+        style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.darkBlue,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+        onPressed: _logout,
+      ),
+    );
+  }
+
+  Future<void> _selectGender() async {
+    String? selected = _gender;
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Select Gender'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ['Male', 'Female'].map((g) {
+            return RadioListTile<String>(
+              title: Text(g),
+              value: g,
+              groupValue: selected,
+              onChanged: (val) async {
+                if (val != null) {
+                  setState(() => _gender = val);
+                  await _updateField({'gender': val});
+                }
+                Navigator.pop(context);
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectBirthdate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthdate ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null && picked != _birthdate) {
+      setState(() => _birthdate = picked);
+      await _updateField({'birthdate': picked.toIso8601String()});
+    }
+  }
+
+  Future<void> _editAboutMe() async {
+    final controller = TextEditingController(text: _aboutMe);
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('About Me'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'About Me'),
+          maxLines: 4,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              setState(() => _aboutMe = controller.text);
+              await _updateField({'aboutme': controller.text});
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileDetailItem({
+    required IconData icon,
+    required String title,
+    required String value,
+    required bool editable,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
+      child: Row(
+          children: [
+          Icon(icon, color: AppColors.darkBlue, size: 24),
+      const SizedBox(width: 10),
+      Text('$title:', style: const TextStyle(color: AppColors.myWhite, fontSize: 16, fontWeight: FontWeight.w600)),
+      const SizedBox(width: 10),
+      Expanded(
+        child: GestureDetector(
+          onTap: editable ? onTap : null,
+          child: Text(value, style: const TextStyle(color: AppColors.myGray, fontSize: 16)),
+        ),
+      ),],
       ),
     );
   }
