@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  static const _baseUrl = 'http://192.168.1.3:3000/api';
+  static const _baseUrl = 'http://192.168.1.15:3000/api';
   final _storage = const FlutterSecureStorage();
 
   // ───────────────────────────────────────────────────────────────────
@@ -113,4 +113,14 @@ class ApiService {
     final streamed = await request.send();
     return http.Response.fromStream(streamed);
   }
+
+  /// Call degree recommendation endpoint
+  Future<http.Response> predictDegree(Map<String, dynamic> body) {
+    return post(
+      '/degree/predict',
+      body,
+      auth: true,
+    );
+  }
+
 }

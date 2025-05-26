@@ -1,7 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import '../Widgets/header.dart';
+import '../services/api_service.dart';
+import 'package:guidera_app/screens/recommendation_loading_screen.dart';
+
 
 /// Custom scroll behavior to remove the scrollbar.
 class NoScrollBehavior extends ScrollBehavior {
@@ -14,7 +19,6 @@ class NoScrollBehavior extends ScrollBehavior {
 
 class ProfileCompletionScreen extends StatefulWidget {
   const ProfileCompletionScreen({Key? key}) : super(key: key);
-
   @override
   State<ProfileCompletionScreen> createState() =>
       _ProfileCompletionScreenState();
@@ -22,9 +26,9 @@ class ProfileCompletionScreen extends StatefulWidget {
 
 class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   // Global keys for each section.
-  final GlobalKey _personalKey = GlobalKey();
   final GlobalKey _academicKey = GlobalKey();
   final GlobalKey _personalityKey = GlobalKey();
+  final ApiService _api = ApiService();
 
   // Current section index: 0 = Personal, 1 = Academic, 2 = Personality.
   int _currentSectionIndex = 0;
@@ -33,17 +37,14 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   final ScrollController _scrollController = ScrollController();
 
   // ---------------- PERSONAL SECTION FIELDS ----------------
-  final TextEditingController _fullNameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _aboutMeController = TextEditingController();
-  DateTime? _dob;
+
   String _gender = "Male"; // Options: Male, Female, Other
-  String _location = ""; // Location dropdown
 
   // ---------------- ACADEMIC SECTION FIELDS ----------------
   String _studentType = "Board"; // "Board" or "Cambridge"
   // Board-specific
   final TextEditingController _matricMarksController = TextEditingController();
+
   final TextEditingController _intermediateMarksController =
   TextEditingController();
   // Cambridge-specific
@@ -56,12 +57,11 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   // Likert scale responses (0: Strongly Disagree ... 4: Strongly Agree)
   int? _p1, _p2, _p3, _p4, _p5, _p6;
   // Multiple-choice questions for personality
-  String _personalityQ7 = "";
-  String _personalityQ8 = "";
+  int? _p7;
+  int? _p8;
 
   // Dummy question lists for slider (not displayed to user)
-  final List<String> _personalQuestions =
-  List.generate(10, (i) => "Personal Q${i + 1}");
+
   final List<String> _academicQuestions =
   List.generate(10, (i) => "Academic Q${i + 1}");
   final List<String> _personalityQuestions =
@@ -69,7 +69,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   // Getter for current section's dummy questions.
   List<String> get _currentQuestions {
-    if (_currentSectionIndex == 0) return _personalQuestions;
     if (_currentSectionIndex == 1) return _academicQuestions;
     return _personalityQuestions;
   }
@@ -83,25 +82,60 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _fullNameController.dispose();
-    _emailController.dispose();
-    _aboutMeController.dispose();
-    _matricMarksController.dispose();
-    _intermediateMarksController.dispose();
     super.dispose();
   }
 
   bool get _isFormComplete {
-    return _personalProgress == 1.0 &&
-        _academicProgress == 1.0 &&
+    return _academicProgress == 1.0 &&
         _personalityProgress == 1.0;
   }
 
-  void _saveProfile() {
-    // Add your saving logic here
-    // For example: validate fields, save to database or API call.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Profile Saved!")),
+  // Map grades to percentages for Cambridge students
+  static const Map<String, double> _gradeToPct = {
+    "A+": 95.0,
+    "A" : 90.0,
+    "B" : 80.0,
+    "C" : 70.0,
+    "D" : 60.0,
+  };
+  void _saveProfile() async {
+    // Compute academic percentage correctly
+    double academicPct;
+    if (_studentType == "Board") {
+      final matric    = double.tryParse(_matricMarksController.text) ?? 0.0;
+      final intermediate =
+          double.tryParse(_intermediateMarksController.text) ?? 0.0;
+      // Assuming full marks of 1100 each (matric + intermediate = 2200)
+      academicPct = ((matric + intermediate) / 2200) * 100;
+    } else {
+      // Cambridge: map grades to percentages and average
+      final oPct = _gradeToPct[_oLevelGrade] ?? 0.0;
+      final aPct = _gradeToPct[_aLevelGrade] ?? 0.0;
+      academicPct = (oPct + aPct) / 2;
+    }
+
+    final body = {
+      "Gender": _gender.toLowerCase() == "male" ? 1 : 0,
+      "Academic Percentage": academicPct,    // now 0–100
+      "Study Stream": _studyStream,
+      "Analytical": _p1! + 1,
+      "Logical": _p2! + 1,
+      "Explaining": _p3! + 1,
+      "Creative": _p4! + 1,
+      "Detail-Oriented": _p5! + 1,
+      "Helping": _p6! + 1,
+      "Activity Preference": _p7! + 1,
+      "Project Preference": _p8! + 1,
+    };
+
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RecommendationLoadingScreen(
+          payload: body,
+        ),
+      ),
     );
   }
 
@@ -110,7 +144,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     double minDistance = double.infinity;
     int newIndex = _currentSectionIndex;
 
-    List<GlobalKey> keys = [_personalKey, _academicKey, _personalityKey];
+    List<GlobalKey> keys = [ _academicKey, _personalityKey];
     for (int i = 0; i < keys.length; i++) {
       final context = keys[i].currentContext;
       if (context != null) {
@@ -144,39 +178,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     );
   }
 
-  // Navigation: Forward and Backward.
-  void _goForward() {
-    if (_currentSectionIndex < 2) {
-      _currentSectionIndex++;
-      _scrollToSection(_getKeyForSection(_currentSectionIndex));
-    }
-  }
-
-  void _goBackward() {
-    if (_currentSectionIndex > 0) {
-      _currentSectionIndex--;
-      _scrollToSection(_getKeyForSection(_currentSectionIndex));
-    }
-  }
 
   GlobalKey _getKeyForSection(int index) {
-    if (index == 0) return _personalKey;
     if (index == 1) return _academicKey;
     return _personalityKey;
   }
 
-  // Dummy progress calculations.
-  double get _personalProgress {
-    int total = 6; // Full Name, Email, About Me, DOB, Gender, Location.
-    int answered = 0;
-    if (_fullNameController.text.isNotEmpty) answered++;
-    if (_emailController.text.isNotEmpty) answered++;
-    if (_aboutMeController.text.isNotEmpty) answered++;
-    if (_dob != null) answered++;
-    if (_gender.isNotEmpty) answered++;
-    if (_location.isNotEmpty) answered++;
-    return answered / total;
-  }
 
   double get _academicProgress {
     int total = 1; // Only Study Stream remains.
@@ -194,8 +201,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     if (_p4 != null) answered++;
     if (_p5 != null) answered++;
     if (_p6 != null) answered++;
-    if (_personalityQ7.isNotEmpty) answered++;
-    if (_personalityQ8.isNotEmpty) answered++;
+    if (_p7 != null) answered++;
+    if (_p8 != null) answered++;
     return answered / total;
   }
 
@@ -361,35 +368,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     );
   }
 
-  // Multiple Choice Question Helper.
-  Widget _buildMultipleChoiceQuestion(String question, List<String> options,
-      String currentValue, Function(String) onChanged) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(question,
-            style: const TextStyle(
-                color: AppColors.myWhite,
-                fontSize: 14,
-                fontWeight: FontWeight.normal)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: options.map((option) {
-            return ChoiceChip(
-              label: Text(option, style: const TextStyle(fontSize: 12)),
-              selected: currentValue == option,
-              selectedColor: AppColors.darkBlue,
-              onSelected: (selected) {
-                onChanged(option);
-              },
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
   // Percentage Display Helper.
   Widget _buildPercentageDisplay(String marksText) {
     if (marksText.isEmpty) return Container();
@@ -418,154 +396,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   // ---------------- SECTION BUILDERS ----------------
 
-  // Personal Section UI.
-  Widget _buildPersonalSection() {
-    return Container(
-      key: _personalKey,
-      child: Padding(
-        padding: const EdgeInsets.all(36.0),
-        child: Column(
-          children: [
-            buildModernTextField(
-              controller: _fullNameController,
-              label: "Full Name",
-              verticalPadding: 1,
-            ),
-            const SizedBox(height: 16),
-            buildModernTextField(
-              controller: _emailController,
-              label: "Email",
-              keyboardType: TextInputType.emailAddress,
-              verticalPadding: 6,
-            ),
-            const SizedBox(height: 16),
-            // About Me multi-line field.
-            TextFormField(
-              controller: _aboutMeController,
-              keyboardType: TextInputType.multiline,
-              maxLines: 4,
-              maxLength: 200,
-              decoration: InputDecoration(
-                labelText: "About Me",
-                labelStyle: const TextStyle(
-                    color: AppColors.myWhite,
-                    fontSize: 14,
-                    fontWeight: FontWeight.normal),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                      color: AppColors.myWhite, width: 1.5),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                      color: AppColors.myWhite, width: 1.5),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                      color: AppColors.myWhite, width: 2),
-                ),
-                filled: true,
-                fillColor: AppColors.lightBlack,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
-              ),
-              style: const TextStyle(
-                  color: AppColors.darkGray,
-                  fontSize: 14,
-                  fontWeight: FontWeight.normal),
-            ),
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () async {
-                DateTime? picked = await showDatePicker(
-                  context: context,
-                  initialDate: _dob ?? DateTime(2000, 1, 1),
-                  firstDate: DateTime(1900),
-                  lastDate: DateTime.now(),
-                );
-                if (picked != null) {
-                  setState(() {
-                    _dob = picked;
-                  });
-                }
-              },
-              child: AbsorbPointer(
-                child: Theme(
-                  data: Theme.of(context).copyWith(
-                    textSelectionTheme:
-                    const TextSelectionThemeData(
-                      cursorColor: AppColors.lightBlue,
-                      selectionColor: AppColors.lightBlue,
-                      selectionHandleColor: AppColors.lightBlue,
-                    ),
-                  ),
-                  child: TextFormField(
-                    decoration: InputDecoration(
-                      labelText: _dob == null
-                          ? "Date of Birth"
-                          : "${_dob!.toLocal().toString().split(' ')[0]}",
-                      labelStyle: const TextStyle(
-                          color: AppColors.myWhite,
-                          fontSize: 14,
-                          fontWeight: FontWeight.normal),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                            color: AppColors.myWhite, width: 1.5),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                            color: AppColors.myWhite, width: 1.5),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                            color: AppColors.myWhite, width: 2),
-                      ),
-                      filled: true,
-                      fillColor: AppColors.lightBlack,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 9),
-                    ),
-                    style: const TextStyle(
-                        color: AppColors.myWhite, fontSize: 14),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            buildModernDropdown(
-              value: _gender,
-              label: "Gender",
-              items: ["Male", "Female", "Other"],
-              onChanged: (val) {
-                setState(() {
-                  _gender = val!;
-                });
-              },
-              verticalPadding: 6,
-            ),
-            const SizedBox(height: 16),
-            buildModernDropdown(
-              value: _location.isEmpty ? null : _location,
-              label: "Location",
-              items: ["Location 1", "Location 2", "Location 3"],
-              onChanged: (val) {
-                setState(() {
-                  _location = val!;
-                });
-              },
-              verticalPadding: 6,
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   // Academic Section UI.
   Widget _buildAcademicSection() {
@@ -638,9 +469,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 "Pre-Medical",
                 "Pre-Engineering",
                 "Computer Science",
-                "Arts",
-                "Commerce",
-                "Other"
               ],
               onChanged: (val) {
                 setState(() {
@@ -665,6 +493,18 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       "Agree",
       "Strongly Agree"
     ];
+
+    const threeOption7 = [
+      "Analyzing data to make predictions",   // → 1
+      "Designing and building systems",       // → 2
+      "Understanding and improving human health" // → 3
+    ];
+    const threeOption8 = [
+      "Developing innovative software solutions",    // → 1
+      "Researching solutions for medical issues",    // → 2
+      "Designing a new mechanical or electrical system" // → 3
+    ];
+
     return Container(
       key: _personalityKey,
       child: Padding(
@@ -737,34 +577,18 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               likertOptions,
             ),
             const SizedBox(height: 16),
-            _buildMultipleChoiceQuestion(
+            _buildLikertQuestion(
               "Which activity excites you the most?",
-              [
-                "Analyzing data to make predictions",
-                "Designing and building systems",
-                "Understanding and improving human health"
-              ],
-              _personalityQ7,
-                  (val) {
-                setState(() {
-                  _personalityQ7 = val;
-                });
-              },
+              _p7,
+                  (val) => setState(() => _p7 = val),
+              threeOption7,
             ),
             const SizedBox(height: 16),
-            _buildMultipleChoiceQuestion(
+            _buildLikertQuestion(
               "Which type of project would you prefer?",
-              [
-                "Developing innovative software solutions",
-                "Researching solutions for medical issues",
-                "Designing a new mechanical or electrical system"
-              ],
-              _personalityQ8,
-                  (val) {
-                setState(() {
-                  _personalityQ8 = val;
-                });
-              },
+              _p8,
+                  (val) => setState(() => _p8 = val),
+              threeOption8,
             ),
             const SizedBox(height: 36),
             ElevatedButton(
@@ -797,7 +621,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 ),
               ),
               child: Text(
-                "Save",
+                "Proceed",
                 style: TextStyle(
                   color: _isFormComplete
                       ? AppColors.myWhite
@@ -852,7 +676,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildPersonalSection(),
                     _buildAcademicSection(),
                     _buildPersonalitySection(),
                   ],
@@ -883,12 +706,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     mainAxisAlignment:
                     MainAxisAlignment.spaceEvenly,
                     children: [
-                      InkWell(
-                        onTap: () =>
-                            _scrollToSection(_getKeyForSection(0)),
-                        child: buildProgressColumn("Personal",
-                            _personalProgress, _currentSectionIndex == 0),
-                      ),
                       InkWell(
                         onTap: () =>
                             _scrollToSection(_getKeyForSection(1)),

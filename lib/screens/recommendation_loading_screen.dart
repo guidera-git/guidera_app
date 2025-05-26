@@ -1,19 +1,29 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:guidera_app/screens/recommendation_results_screen.dart';
 import 'package:lottie/lottie.dart';
-import 'package:guidera_app/Widgets/header.dart';        // Your existing header component
-import 'package:guidera_app/theme/app_colors.dart'; // Your color constants
+import '../Widgets/header.dart';
+import '../theme/app_colors.dart';
+import '../services/api_service.dart';
+import 'recommendation_results_screen.dart';
+import '../models/user_profile.dart'; // we’ll parse into this model
 
 class RecommendationLoadingScreen extends StatefulWidget {
-  const RecommendationLoadingScreen({super.key, required Null Function() onLoaderComplete});
+  final Map<String, dynamic> payload;
+
+  const RecommendationLoadingScreen({
+    Key? key,
+    required this.payload,
+  }) : super(key: key);
 
   @override
-  State<RecommendationLoadingScreen> createState() => _RecommendationLoadingScreenState();
+  State<RecommendationLoadingScreen> createState() =>
+      _RecommendationLoadingScreenState();
 }
 
-class _RecommendationLoadingScreenState extends State<RecommendationLoadingScreen>
+class _RecommendationLoadingScreenState
+    extends State<RecommendationLoadingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   int _currentMessageIndex = 0;
@@ -24,45 +34,82 @@ class _RecommendationLoadingScreenState extends State<RecommendationLoadingScree
     "Optimizing best choices...",
     "Almost there!"
   ];
+  late Timer _msgTimer;
+  final ApiService _api = ApiService();
+  String? _userName;
 
   @override
   void initState() {
     super.initState();
+    // Start the rotating brain animation
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
 
-    _startMessageCycle();
-  }
-
-  void _startMessageCycle() {
-    Timer.periodic(const Duration(seconds: 3), (timer) {
+    // Cycle messages
+    _msgTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted) {
-        setState(() => _currentMessageIndex = (_currentMessageIndex + 1) % _messages.length);
-        if (timer.tick * 3 >= 15) {
-          timer.cancel();
-          _navigateToResults();
-        }
+        setState(() =>
+        _currentMessageIndex = (_currentMessageIndex + 1) % _messages.length);
       }
     });
+
+    // Kick off the prediction call
+    _loadProfileAndPredict();
   }
 
-  void _navigateToResults() {
-    // Replace with actual navigation
-    Navigator.push(context, MaterialPageRoute(builder: (context) => RecommendationResultsScreen(),));
+  Future<void> _loadProfileAndPredict() async {
+    try {
+      // Fetch profile (must be authenticated)
+      final profileResp = await _api.getProfile();
+      if (profileResp.statusCode == 200) {
+        final profileJson = jsonDecode(profileResp.body);
+        _userName = profileJson['fullname'] as String? ?? '';
+      } else {
+        _userName = '';
+      }
+
+      // Then call prediction
+      final predResp = await _api.predictDegree(widget.payload);
+      final predJson = jsonDecode(predResp.body);
+      final predictedDegree = predJson['predicted_degree'] as String;
+
+      // Cleanup timers/animation
+      _msgTimer.cancel();
+      _controller.dispose();
+
+      // Navigate to results, passing both userName and degree
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RecommendationResultsScreen(
+            userName: _userName!,
+            recommendedDegree: predictedDegree,
+          ),
+        ),
+      );
+    } catch (e) {
+      _msgTimer.cancel();
+      _controller.dispose();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+      Navigator.pop(context);
+    }
   }
 
   @override
   void dispose() {
+    _msgTimer.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final iconColor = isDarkMode ? AppColors.myWhite : AppColors.myBlack;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isDark ? AppColors.myWhite : AppColors.myBlack;
 
     return Scaffold(
       backgroundColor: AppColors.myBlack,
@@ -71,7 +118,7 @@ class _RecommendationLoadingScreenState extends State<RecommendationLoadingScree
           Column(
             children: [
               const GuideraHeader(),
-              Expanded(child: _buildLoadingContent(isDarkMode)),
+              Expanded(child: _buildLoadingContent(isDark)),
             ],
           ),
           Positioned(
@@ -98,9 +145,26 @@ class _RecommendationLoadingScreenState extends State<RecommendationLoadingScree
         children: [
           _buildAnimatedBrain(isDarkMode),
           const SizedBox(height: 30),
-          _buildThinkingMessages(),
+          Text(
+            _messages[_currentMessageIndex],
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 40),
-          _buildParticleAnimation(),
+          SizedBox(
+            width: 300,
+            height: 100,
+            child: Lottie.asset(
+              'assets/animations/loader.json',
+              animate: true,
+              repeat: true,
+              frameRate: FrameRate(60),
+            ),
+          ),
         ],
       ),
     );
@@ -152,57 +216,6 @@ class _RecommendationLoadingScreenState extends State<RecommendationLoadingScree
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildThinkingMessages() {
-    return Column(
-      children: [
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 500),
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.1),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            ),
-          ),
-          child: Text(
-            _messages[_currentMessageIndex],
-            key: ValueKey(_currentMessageIndex),
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontStyle: FontStyle.italic,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          'This usually takes 10-15 seconds',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[500],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildParticleAnimation() {
-    return SizedBox(
-      width: 300,
-      height: 100,
-      child: Lottie.asset(
-        'assets/animations/loader.json',
-        animate: true,
-        repeat: true,
-        frameRate: FrameRate(60),
-      ),
     );
   }
 }
