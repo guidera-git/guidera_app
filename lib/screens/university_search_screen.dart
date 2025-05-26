@@ -6,6 +6,7 @@ import 'package:guidera_app/screens/recommendation_loading_screen.dart';
 import 'package:guidera_app/screens/recommendation_results_screen.dart';
 import 'package:guidera_app/screens/saved_programs_screen.dart';
 import 'package:guidera_app/screens/university_information.dart';
+import 'package:guidera_app/screens/user_form.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 
 import 'home_screen.dart';
@@ -290,17 +291,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => RecommendationLoadingScreen(
-                    onLoaderComplete: () {
-                      // Navigate to RecommendationResultsScreen after loader completes
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RecommendationResultsScreen(),
-                        ),
-                      );
-                    },
-                  ),
+                  builder: (context) => ProfileCompletionScreen(),
                 ),
               );
             },
@@ -311,14 +302,15 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             ),
-            icon: const Text('Recommend Me'),
-            label: SvgPicture.asset(
+            icon: SvgPicture.asset(
               'assets/images/recommend.svg',
               width: 26,
               color: Colors.white,
             ),
+            label: const Text('Recommend Me'),
           ),
         ),
+
       ],
     );
   }

@@ -5,9 +5,14 @@ import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 
 class RecommendationResultsScreen extends StatelessWidget {
-  final String userName = "Ali Raza"; // Replace with actual user name
+  final String userName;
+  final String recommendedDegree;
 
-  const RecommendationResultsScreen({super.key});
+  const RecommendationResultsScreen({
+    Key? key,
+    required this.userName,
+    required this.recommendedDegree,   // ← add this parameter
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +31,7 @@ class RecommendationResultsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                   _buildRecommendationCard(
                     context: context,
-                    profession: "Software Engineering",
+                    profession: recommendedDegree,
                     degree: "BS Computer Science",
                     university: "FAST NUCES Lahore",
                     avgSalary: "PKR 120,000",
@@ -175,49 +180,7 @@ class RecommendationResultsScreen extends StatelessWidget {
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildInfoColumn('Degree', degree),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildInfoColumn('University', university),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildInfoColumn('Avg Salary', avgSalary),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Demand',
-                        style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    Row(children: _buildDemandStars(demandStars)),
-                  ],
-                ),
-              ],
-            ),
-          ),
+
           Transform.translate(
             offset: const Offset(-10, 0),
             child: Align(
