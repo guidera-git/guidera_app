@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  static const _baseUrl = 'http://192.168.1.15:3000/api';
+  static const _baseUrl = 'http://192.168.0.106:3000/api';
   final _storage = const FlutterSecureStorage();
 
   // ───────────────────────────────────────────────────────────────────
@@ -123,4 +123,20 @@ class ApiService {
     );
   }
 
+  // Chatbot message
+  /// Sends a user message to the chatbot endpoint and returns the assistant's reply
+  Future<String> sendMessage(String message) async {
+    final response = await post(
+      '/chatbot',
+      {'message': message},
+      auth: true,
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['reply'] as String;
+    } else {
+      throw Exception('Failed to send message: \${response.statusCode}');
+    }
+  }
 }
