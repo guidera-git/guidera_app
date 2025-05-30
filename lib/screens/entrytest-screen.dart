@@ -1,81 +1,140 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart';
-import 'package:guidera_app/Widgets/fancy_bottom_nav_bar.dart';
-import 'package:guidera_app/Widgets/fancy_nav_item.dart';
-import 'package:guidera_app/screens/university_search_screen.dart';
+import 'package:guidera_app/screens/home_screen.dart';
 import 'package:guidera_app/screens/question-screen.dart';
-import 'package:guidera_app/theme/app_colors.dart'; // <-- Import your color constants
+import 'package:guidera_app/theme/app_colors.dart';
+import 'package:guidera_app/services/api_service.dart';
 import 'dart:math' as math;
 
-import 'home_screen.dart';
+/// Data model for each subject tile
+class SubjectCard {
+  final String title;
+  final String iconPath;
+  final LinearGradient gradient;
+  final Color titleColor;
+  final Color circleColor;
+  final Color iconColor;
+  final String code;
+
+  const SubjectCard({
+    required this.title,
+    required this.iconPath,
+    required this.gradient,
+    required this.titleColor,
+    required this.circleColor,
+    required this.iconColor,
+    required this.code,
+  });
+}
+
+/// Consolidated list of subjects with backend codes
+const subjects = <SubjectCard>[
+  SubjectCard(
+    title: 'Chemistry',
+    iconPath: 'assets/images/chemistry.svg',
+    gradient: LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
+    titleColor: AppColors.darkBlue,
+    circleColor: AppColors.darkBlue,
+    iconColor: AppColors.myWhite,
+    code: 'CHEMISTRY',
+  ),
+  SubjectCard(
+    title: 'Biology',
+    iconPath: 'assets/images/biology.svg',
+    gradient: LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
+    titleColor: AppColors.myWhite,
+    circleColor: AppColors.myWhite,
+    iconColor: AppColors.darkBlue,
+    code: 'BIOLOGY',
+  ),
+  SubjectCard(
+    title: 'Physics',
+    iconPath: 'assets/images/physics.svg',
+    gradient: LinearGradient(colors: [AppColors.darkBlack, AppColors.darkBlack]),
+    titleColor: AppColors.myWhite,
+    circleColor: AppColors.myWhite,
+    iconColor: AppColors.myBlack,
+    code: 'PHY',
+  ),
+  SubjectCard(
+    title: 'English',
+    iconPath: 'assets/images/english.svg',
+    gradient: LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
+    titleColor: AppColors.darkBlue,
+    circleColor: AppColors.darkBlue,
+    iconColor: AppColors.myWhite,
+    code: 'ENGLISH',
+  ),
+  SubjectCard(
+    title: 'Analytical Reasoning',
+    iconPath: 'assets/images/test.svg',
+    gradient: LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
+    titleColor: AppColors.myWhite,
+    circleColor: AppColors.myWhite,
+    iconColor: AppColors.darkBlue,
+    code: 'ANALYTICAL_REASONING',
+  ),
+];
 
 class EntryTestScreen extends StatefulWidget {
-  final String subjectName;
-
-  const EntryTestScreen({Key? key, required this.subjectName}) : super(key: key);
+  const EntryTestScreen({Key? key}) : super(key: key);
 
   @override
   State<EntryTestScreen> createState() => _EntryTestScreenState();
 }
 
 class _EntryTestScreenState extends State<EntryTestScreen> {
-  int _currentIndex = 0;
+  final ApiService _apiService = ApiService();
 
-  final List<LinearGradient> _cardGradients = [
-    LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
-    LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
-    LinearGradient(colors: [AppColors.darkBlack, AppColors.darkBlack]),
-    LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
-    LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
-  ];
+  Future<void> _startTest(SubjectCard subject) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
 
-  final List<Color> _titleCardColors = [
-    AppColors.darkBlue,
-    AppColors.myWhite,
-    AppColors.myWhite,
-    AppColors.darkBlue,
-    AppColors.myWhite,
-  ];
+    try {
+      // Call backend to initiate test
+      final response = await _apiService.startTest(subject.code);
+      Navigator.of(context).pop(); // hide loader
 
-  final List<Map<String, Color>> _circleColors = [
-    {'circle': AppColors.darkBlue, 'icon': AppColors.myWhite},
-    {'circle': AppColors.myWhite, 'icon': AppColors.darkBlue},
-    {'circle': AppColors.myWhite, 'icon': AppColors.myBlack},
-    {'circle': AppColors.darkBlue, 'icon': AppColors.myWhite},
-    {'circle': AppColors.myWhite, 'icon': AppColors.darkBlue},
-  ];
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final attemptId = data['attemptId'];
+        final questions = data['questions'];
 
-  late final List<Widget> _screens;
-
-  @override
-  void initState() {
-    super.initState();
-    _screens = [
-      const Center(child: Text("Home Screen")), // Placeholder for Home Screen
-      const UniversitySearchScreen(),
-      const Center(child: Text("Analytics Screen")),
-      const Center(child: Text("Entry Test Screen")),
-      const Center(child: Text("Chatbot Screen"))
-    ];
+        //Navigate to QuestionScreen with payload
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => QuestionScreen(
+              subjectName: subject.title,
+              attemptId: attemptId,
+              questions: questions,
+            ),
+          ),
+        );
+      } else {
+        // Error handling
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start test: ${response.statusCode}')),
+        );
+      }
+    } catch (e) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color backgroundColor = isDarkMode ? AppColors.myBlack : AppColors.myWhite;
-
-    final List<FancyNavItem> items = [
-      FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
-      FancyNavItem(label: "Find", svgPath: "assets/images/search.svg"),
-      FancyNavItem(label: "Analytics", svgPath: "assets/images/analytics.svg"),
-      FancyNavItem(label: "Entry Test", svgPath: "assets/images/entry_test.svg"),
-      FancyNavItem(label: "Chatbot", svgPath: "assets/images/chatbot.svg"),
-    ];
-
     return Scaffold(
       backgroundColor: AppColors.myBlack,
-      // Custom AppBar with header and back button
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Stack(
@@ -86,21 +145,11 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
               left: 10,
               child: IconButton(
                 icon: SvgPicture.asset(
-                  "assets/images/back.svg",
+                  'assets/images/back.svg',
                   color: AppColors.myWhite,
                   height: 30,
                 ),
-                onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  } else {
-                    // Fallback: navigate to a default screen (e.g., HomeScreen)
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                    );
-                  }
-                },
+                onPressed: () => Navigator.of(context).maybePop(),
               ),
             ),
           ],
@@ -108,145 +157,85 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
       ),
       body: Column(
         children: [
+          const WelcomeCard(userName: 'Stay Focused!'),
           Expanded(
-            child: HomeTab(
-              onGridItemSelected: (index) {
-                // Handle grid item selection
-                final subject = ["Chemistry", "Biology", "Physics", "English", "Computer"][index];
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => QuestionScreen(subjectName: subject),
-                  ),
-                );
-              },
-              cardGradients: _cardGradients,
-              titleCardColors: _titleCardColors,
-              circleColors: _circleColors,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const BouncingScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 1.2,
+                ),
+                itemCount: subjects.length,
+                itemBuilder: (context, index) {
+                  final subject = subjects[index];
+                  return SubjectCardWidget(
+                    data: subject,
+                    onTap: () => _startTest(subject),
+                  );
+                },
+              ),
             ),
           ),
         ],
       ),
-      // bottomNavigationBar: GuideraBottomNavBar(
-      //   items: items,
-      //   initialIndex: _currentIndex,
-      //   onItemSelected: (index) => setState(() => _currentIndex = index),
-      // ),
     );
   }
 }
 
-class HomeTab extends StatelessWidget {
-  final Function(int) onGridItemSelected;
-  final List<LinearGradient> cardGradients;
-  final List<Color> titleCardColors;
-  final List<Map<String, Color>> circleColors;
+class SubjectCardWidget extends StatelessWidget {
+  final SubjectCard data;
+  final VoidCallback onTap;
 
-  const HomeTab({
-    Key? key,
-    required this.onGridItemSelected,
-    required this.cardGradients,
-    required this.titleCardColors,
-    required this.circleColors,
-  }) : super(key: key);
+  const SubjectCardWidget({Key? key, required this.data, required this.onTap}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // The WelcomeCard is now outside the SingleChildScrollView
-        WelcomeCard(
-          userName: 'Stay Focused!',
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                const SizedBox(height: 24.0),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16.0,
-                    mainAxisSpacing: 16.0,
-                    childAspectRatio: 1.2,
-                    children: [
-                      _buildGridCard("Chemistry", "assets/images/chemistry.svg", 0),
-                      _buildGridCard("Biology", "assets/images/biology.svg", 1),
-                      _buildGridCard("Physics", "assets/images/physics.svg", 2),
-                      _buildGridCard("English", "assets/images/english.svg", 3),
-                      _buildGridCard("Computer", "assets/images/test.svg", 4),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24.0),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text(
-                    "Here is some additional content printed under the welcome card.",
-                    style: TextStyle(
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.myBlack,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGridCard(String title, String iconPath, int index) {
-    final colorPair = circleColors[index % 4];
-    final gradient = cardGradients[index % 4];
-    final titleColor = titleCardColors[index % 4];
-
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(16.0),
       child: Ink(
         decoration: BoxDecoration(
-          gradient: gradient,
+          gradient: data.gradient,
           borderRadius: BorderRadius.circular(16.0),
           boxShadow: [
             BoxShadow(
               color: AppColors.myBlack.withOpacity(0.1),
               blurRadius: 8,
               spreadRadius: 2,
-            )
+            ),
           ],
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(16.0),
-          onTap: () => onGridItemSelected(index),
+          onTap: onTap,
           child: Stack(
             children: [
-              // Title Card (top-left)
               Positioned(
                 top: 12,
                 left: 12,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: titleColor,
+                    color: data.titleColor,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    title,
+                    data.title,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: _getContrastColor(titleColor),
+                      color: data.titleColor.computeLuminance() > 0.5
+                          ? AppColors.myBlack
+                          : AppColors.myWhite,
                     ),
                   ),
                 ),
               ),
-              // Circular Button (bottom-left)
               Positioned(
                 bottom: 12,
                 left: 12,
@@ -254,7 +243,7 @@ class HomeTab extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: colorPair['circle']!.withOpacity(0.9),
+                    color: data.circleColor.withOpacity(0.9),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -267,20 +256,19 @@ class HomeTab extends StatelessWidget {
                   child: Transform.rotate(
                     angle: 145 * math.pi / 180,
                     child: SvgPicture.asset(
-                      "assets/images/back.svg",
+                      'assets/images/back.svg',
                       width: 16,
                       height: 16,
-                      color: colorPair['icon'],
+                      color: data.iconColor,
                     ),
                   ),
                 ),
               ),
-              // Main Icon (bottom-right)
               Positioned(
                 bottom: 12,
                 right: 12,
                 child: SvgPicture.asset(
-                  iconPath,
+                  data.iconPath,
                   height: 50,
                   width: 50,
                 ),
@@ -291,20 +279,12 @@ class HomeTab extends StatelessWidget {
       ),
     );
   }
-
-  Color _getContrastColor(Color backgroundColor) {
-    final luminance = backgroundColor.computeLuminance();
-    return luminance > 0.5 ? AppColors.myBlack : AppColors.myWhite;
-  }
 }
 
 class WelcomeCard extends StatelessWidget {
   final String userName;
 
-  const WelcomeCard({
-    Key? key,
-    required this.userName,
-  }) : super(key: key);
+  const WelcomeCard({Key? key, required this.userName}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
