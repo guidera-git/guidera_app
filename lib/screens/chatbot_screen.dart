@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-
-// Replace these with your actual imports.
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
-import 'package:guidera_app/screens/profile_dashboard_screen.dart'; // Make sure this is the correct path
+import 'package:guidera_app/services/api_service.dart';
 
 /// A single chat message (user or bot).
 class ChatMessage {
@@ -20,165 +18,107 @@ class ChatMessage {
   });
 }
 
-/// Clipper for a WhatsApp-like bubble with a tail.
-/// The tail side does NOT have a curved corner, making it look naturally attached.
+/// Clipper for WhatsApp-like bubble with a tail.
 class WhatsAppBubbleClipper extends CustomClipper<Path> {
-  final bool isUser; // If true => tail on bottom-right, else bottom-left.
-
+  final bool isUser;
   WhatsAppBubbleClipper({required this.isUser});
 
   @override
   Path getClip(Size size) {
-    final double r = 10; // Corner radius
-    final double tailSize = 6; // Size of the tail
-    final double w = size.width;
-    final double h = size.height;
-
+    final r = 10.0, tail = 6.0;
+    final w = size.width, h = size.height;
     final path = Path();
-
     if (isUser) {
-      // Bubble with tail on the bottom-right.
       path.moveTo(r, 0);
       path.lineTo(w - r, 0);
       path.quadraticBezierTo(w, 0, w, r);
-      path.lineTo(w, h - tailSize);
-      // Draw tail (attached, not curved).
+      path.lineTo(w, h - tail);
       path.lineTo(w - 5, h);
-      path.lineTo(w - 10, h - tailSize);
-      path.lineTo(r, h - tailSize);
-      path.quadraticBezierTo(0, h - tailSize, 0, h - r - tailSize);
+      path.lineTo(w - 10, h - tail);
+      path.lineTo(r, h - tail);
+      path.quadraticBezierTo(0, h - tail, 0, h - r - tail);
       path.lineTo(0, r);
       path.quadraticBezierTo(0, 0, r, 0);
-      path.close();
     } else {
-      // Bubble with tail on the bottom-left.
       path.moveTo(r, 0);
       path.lineTo(w - r, 0);
       path.quadraticBezierTo(w, 0, w, r);
-      path.lineTo(w, h - r - tailSize);
-      path.quadraticBezierTo(w, h - tailSize, w - r, h - tailSize);
-      path.lineTo(tailSize, h - tailSize);
-      // Draw tail (attached, not curved).
+      path.lineTo(w, h - r - tail);
+      path.quadraticBezierTo(w, h - tail, w - r, h - tail);
+      path.lineTo(tail, h - tail);
       path.lineTo(5, h);
-      path.lineTo(0, h - tailSize);
+      path.lineTo(0, h - tail);
       path.lineTo(0, r);
       path.quadraticBezierTo(0, 0, r, 0);
-      path.close();
     }
+    path.close();
     return path;
   }
 
   @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+  bool shouldReclip(CustomClipper<Path> old) => false;
 }
 
-/// A widget that clips text into a WhatsApp-like bubble with a connected tail.
+/// Bubble widget.
 class WhatsAppBubble extends StatelessWidget {
   final String text;
   final bool isUser;
-
-  const WhatsAppBubble({
-    Key? key,
-    required this.text,
-    required this.isUser,
-  }) : super(key: key);
+  const WhatsAppBubble({Key? key, required this.text, required this.isUser}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final bubbleColor = isUser ? AppColors.darkBlue : AppColors.myWhite;
-    final textColor = isUser ? AppColors.myWhite : AppColors.myBlack;
-
+    final bg = isUser ? AppColors.darkBlue : AppColors.myWhite;
+    final color = isUser ? AppColors.myWhite : AppColors.myBlack;
     return ClipPath(
       clipper: WhatsAppBubbleClipper(isUser: isUser),
       child: Container(
-        color: bubbleColor,
-        // Symmetrical padding so text doesn't stick to edges.
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        // Constrain max width so bubble grows vertically for long text.
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 15,
-          ),
-        ),
+        color: bg,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
+        child: Text(text, style: TextStyle(color: color, fontSize: 16)),
       ),
     );
   }
 }
 
-/// A custom widget that continuously cycles through a list of messages using a typewriter animation.
-/// It types the message letter-by-letter, pauses, then removes the text before moving to the next message.
+/// Animated prompt when no messages present.
 class CyclicTypewriterText extends StatefulWidget {
   final List<String> texts;
   final TextStyle style;
-  final Duration letterDuration;
-  final Duration initialDelay;
-  final Duration pauseDuration;
-
-  const CyclicTypewriterText({
-    Key? key,
-    required this.texts,
-    required this.style,
-    this.letterDuration = const Duration(milliseconds: 100),
-    this.initialDelay = const Duration(milliseconds: 500),
-    this.pauseDuration = const Duration(milliseconds: 1000),
-  }) : super(key: key);
+  const CyclicTypewriterText({Key? key, required this.texts, required this.style}) : super(key: key);
 
   @override
   _CyclicTypewriterTextState createState() => _CyclicTypewriterTextState();
 }
 
 class _CyclicTypewriterTextState extends State<CyclicTypewriterText> {
-  String _currentDisplay = "";
-  int _currentTextIndex = 0;
+  String display = '';
+  int idx = 0;
 
   @override
   void initState() {
     super.initState();
-    _startTypingLoop();
+    _loop();
   }
 
-  Future<void> _startTypingLoop() async {
-    const typingDuration = Duration(milliseconds: 100);
+  Future<void> _loop() async {
     while (mounted) {
-      final text = widget.texts[_currentTextIndex];
-      // Phase 1: Clear text.
-      setState(() {
-        _currentDisplay = "";
-      });
-      await Future.delayed(widget.initialDelay);
-      // Phase 2: Type out text letter-by-letter.
-      for (int i = 1; i <= text.length; i++) {
-        if (!mounted) return;
-        setState(() {
-          _currentDisplay = text.substring(0, i);
-        });
-        await Future.delayed(typingDuration);
+      final text = widget.texts[idx];
+      for (int i = 0; i <= text.length; i++) {
+        setState(() => display = text.substring(0, i));
+        await Future.delayed(const Duration(milliseconds: 100));
       }
-      // Phase 3: Pause with full text visible.
-      await Future.delayed(widget.pauseDuration);
-      // Phase 4: Delete text letter-by-letter.
+      await Future.delayed(const Duration(milliseconds: 1000));
       for (int i = text.length; i >= 0; i--) {
-        if (!mounted) return;
-        setState(() {
-          _currentDisplay = text.substring(0, i);
-        });
-        await Future.delayed(typingDuration);
+        setState(() => display = text.substring(0, i));
+        await Future.delayed(const Duration(milliseconds: 100));
       }
-      // Phase 5: Pause before next text.
-      await Future.delayed(widget.initialDelay);
-      _currentTextIndex = (_currentTextIndex + 1) % widget.texts.length;
+      idx = (idx + 1) % widget.texts.length;
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Text(_currentDisplay, style: widget.style);
-  }
+  Widget build(BuildContext context) => Text(display, style: widget.style, textAlign: TextAlign.center);
 }
 
 class ChatbotScreen extends StatefulWidget {
@@ -189,55 +129,99 @@ class ChatbotScreen extends StatefulWidget {
 }
 
 class _ChatbotScreenState extends State<ChatbotScreen> {
-  final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  final List<ChatMessage> _messages = [];
+  final ApiService api = ApiService();
+  final TextEditingController ctrl = TextEditingController();
+  final ScrollController scrollCtrl = ScrollController();
+  final FocusNode focusNode = FocusNode();
+  final List<ChatMessage> messages = [];
 
-  // Sample FAQ list.
-  final List<Map<String, String>> _faqs = [
-    {
-      'question': 'How does Guidera recommend universities?',
-      'answer':
-      'Guidera uses your academic scores, preferences, and personality insights to generate personalized recommendations.'
-    },
-    {
-      'question': 'Can Guidera help me with deadlines?',
-      'answer':
-      'Yes, Guidera provides automated alerts for all important admission deadlines.'
-    },
-    {
-      'question': 'What data does Guidera provide?',
-      'answer': 'You get details like fee structure, admission dates, courses, and more.'
-    },
-    {
-      'question': 'How does Guidera help with test preparation?',
-      'answer':
-      'Guidera offers mock tests and visualizes your results to help you prepare effectively.'
-    },
+  final List<String> prompts = [
+    "What is Guidera?",
+    "How does Guidera recommend degrees?",
+    "Do you recommend universities or degrees?",
+    "What university information does Guidera provide?",
+    "How can I track my application process?",
+    "Are my applications submitted automatically?",
+    "How does entry test preparation work?",
+    "What kind of notifications will I receive?",
+    "Can I get help with career or academic questions?",
+    "Is Guidera’s university data kept up to date?"
   ];
+  List<String> suggestions = [];
 
-  /// Scrolls the chat list to the bottom.
-  void _scrollToBottom() {
+  void _scrollDown() {
     Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+      if (scrollCtrl.hasClients) {
+        scrollCtrl.animateTo(scrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       }
     });
   }
 
-  /// Hides the animated text by triggering a rebuild.
-  void _hideAnimatedText() {
-    if (_messages.isNotEmpty) setState(() {});
+  Future<void> _send(String text) async {
+    setState(() {
+      suggestions.clear();
+      messages.add(ChatMessage(text: text, isUser: true));
+      messages.add(ChatMessage(text: 'Thinking...', isUser: false, isTyping: true));
+    });
+    _scrollDown();
+    final idx = messages.length - 1;
+    try {
+      final resp = await api.sendMessage(text);
+      _type(resp, idx);
+    } catch (_) {
+      setState(() {
+        messages[idx].isTyping = false;
+        messages[idx].text = 'Failed to load response.';
+      });
+    }
+  }
+
+  void _type(String full, int i) {
+    int c = 0;
+    Timer.periodic(const Duration(milliseconds: 30), (t) {
+      if (c < full.length) {
+        setState(() => messages[i].text = full.substring(0, c + 1));
+        c++;
+        _scrollDown();
+      } else {
+        t.cancel();
+        setState(() => messages[i].isTyping = false);
+      }
+    });
+  }
+
+  void _onChanged(String text) {
+    if (text.isEmpty) {
+      setState(() => suggestions.clear());
+    } else {
+      final query = text.toLowerCase();
+      setState(() {
+        suggestions = prompts
+            .where((p) => p.toLowerCase().contains(query))
+            .toList();
+      });
+    }
+  }
+
+  void _onSend() {
+    final text = ctrl.text.trim();
+    if (text.isEmpty) return;
+    ctrl.clear();
+    _send(text);
+  }
+
+  @override
+  void dispose() {
+    ctrl.dispose();
+    scrollCtrl.dispose();
+    focusNode.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Dark background gradient.
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -248,7 +232,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         ),
         child: Column(
           children: [
-            // Header area: Stack with GuideraHeader, back button (using back.svg) & profile (right).
             Stack(
               children: [
                 const GuideraHeader(),
@@ -264,273 +247,151 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     ),
                   ),
                 ),
-                Positioned(
-                  left: 339,
-                  top: 70,
-                  //padding: const EdgeInsets.only(right: 16.0),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const UserProfileScreen(),
+              ],
+            ),
+            Expanded(
+              child: messages.isEmpty
+                  ? Center(
+                child: CyclicTypewriterText(
+                  texts: const [
+                    'What can I help with?',
+                    'How can I assist you?',
+                    'Need any help?'
+                  ],
+                  style: const TextStyle(
+                    color: AppColors.myWhite,
+                    fontSize: 27,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+                  : ListView.builder(
+                controller: scrollCtrl,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  final msg = messages[index];
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      mainAxisAlignment: msg.isUser
+                          ? MainAxisAlignment.end
+                          : MainAxisAlignment.start,
+                      children: [
+                        WhatsAppBubble(
+                          text: msg.text,
+                          isUser: msg.isUser,
                         ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(25),
-                    child: CircleAvatar(
-                      radius: 25,
-                      backgroundImage: NetworkImage(
-                          "https://avatars.githubusercontent.com/u/168419532?v=4"
-                      ),
-                      backgroundColor: AppColors.darkBlue,
+                      ],
                     ),
+                  );
+                },
+              ),
+            ),
+            // Input & suggestions
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Suggestions dropdown
+                if (suggestions.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.myWhite,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 6,
+                          offset: Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    constraints: BoxConstraints(maxHeight: 200),
+                    child: Scrollbar(
+                      child: ListView.separated(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        itemCount: suggestions.length,
+                        separatorBuilder: (_, __) => Divider(
+                            color: AppColors.lightBlack, height: 1),
+                        itemBuilder: (context, i) {
+                          final s = suggestions[i];
+                          return InkWell(
+                            onTap: () {
+                              ctrl.text = s;
+                              setState(() => suggestions.clear());
+                              _onSend();
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(s,
+                                  style: const TextStyle(
+                                      fontSize: 15,
+                                      color: AppColors.myBlack)),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: AppColors.lightGray,
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: TextField(
+                            focusNode: focusNode,
+                            controller: ctrl,
+                            onChanged: _onChanged,
+                            style: const TextStyle(
+                                fontSize: 15, color: AppColors.myBlack),
+                            decoration: InputDecoration(
+                              hintText: 'Type your message...',
+                              hintStyle: const TextStyle(
+                                  color: AppColors.lightBlack),
+                              contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 20),
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        height: 50,
+                        width: 50,
+                        decoration: BoxDecoration(
+                          color: AppColors.lightBlue,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.lightBlue.withOpacity(0.5),
+                              blurRadius: 8,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: SvgPicture.asset('assets/images/send.svg',
+                              width: 24, color: AppColors.myWhite),
+                          onPressed: _onSend,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
-            ),
-
-            // Main conversation area with a Stack overlay.
-            Expanded(
-              child: Stack(
-                children: [
-                  // List of FAQs and chat messages.
-                  ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    itemCount: _messages.length + 1, // Extra for FAQ section.
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return _buildFAQSection();
-                      }
-                      final msgIndex = index - 1;
-                      final message = _messages[msgIndex];
-                      return _buildMessageRow(message);
-                    },
-                  ),
-                  // Animated cyclic typewriter text overlay (shown only when there are no messages).
-                  if (_messages.isEmpty)
-                    Center(
-                      child: CyclicTypewriterText(
-                        texts: const [
-                          "What can I help with?",
-                          "How can I assist you?",
-                          "Need any help?"
-                        ],
-                        style: const TextStyle(
-                          color: AppColors.myWhite,
-                          fontSize: 27,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        letterDuration: const Duration(milliseconds: 100),
-                        initialDelay: const Duration(milliseconds: 500),
-                        pauseDuration: const Duration(milliseconds: 1000),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            // Bottom input container with curved top corners.
-            Container(
-              decoration: const BoxDecoration(
-                color: AppColors.myBlack,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 55,
-                      decoration: BoxDecoration(
-                        color: AppColors.lightGray,
-                        borderRadius: BorderRadius.circular(70),
-                      ),
-                      child: Stack(
-                        alignment: Alignment.centerLeft,
-                        children: [
-                          TextField(
-                            controller: _messageController,
-                            textAlign: TextAlign.justify,
-                            textAlignVertical: TextAlignVertical.center,
-                            style: const TextStyle(
-                              fontFamily: 'Product Sans',
-                              fontSize: 15,
-                              color: AppColors.myBlack,
-                            ),
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.only(left: 15, top: 4, bottom: 8),
-                              hintText: 'Type your message...',
-                              hintStyle: TextStyle(
-                                fontFamily: 'Product Sans',
-                                fontWeight: FontWeight.normal,
-                                color: AppColors.lightBlack,
-                                fontSize: 15,
-                              ),
-                            ),
-                            onChanged: (text) {
-                              if (text.trim().isNotEmpty) _hideAnimatedText();
-                            },
-                          ),
-                          Positioned(
-                            right: 0,
-                            child: Container(
-                              height: 35,
-                              margin: const EdgeInsets.only(right: 14),
-                              decoration: BoxDecoration(
-                                color: AppColors.lightBlue,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: IconButton(
-                                icon: SvgPicture.asset(
-                                  'assets/images/send.svg',
-                                  width: 20,
-                                  color: AppColors.myWhite,
-                                ),
-                                onPressed: _handleSend,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  /// Builds the FAQ section at the top.
-  Widget _buildFAQSection() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: Text(
-              "FAQs",
-              style: TextStyle(
-                color: AppColors.myWhite,
-                fontSize: 25,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 106,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              itemCount: _faqs.length,
-              itemBuilder: (context, index) {
-                final faq = _faqs[index];
-                return GestureDetector(
-                  onTap: () => _handleFaqTap(faq['question']!, faq['answer']!),
-                  child: Card(
-                    color: AppColors.lightGray,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    margin: const EdgeInsets.only(right: 10),
-                    child: Container(
-                      width: 200,
-                      padding: const EdgeInsets.all(16),
-                      child: Center(
-                        child: Text(
-                          faq['question']!,
-                          style: const TextStyle(
-                            color: AppColors.darkBlack,
-                            fontSize: 14,
-                            fontWeight: FontWeight.normal,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Builds a chat message row with a WhatsApp-style bubble.
-  Widget _buildMessageRow(ChatMessage message) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment:
-        message.isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        children: [
-          WhatsAppBubble(
-            text: message.text,
-            isUser: message.isUser,
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Handles FAQ tap: adds the user's question and then simulates a bot response.
-  void _handleFaqTap(String question, String answer) {
-    setState(() {
-      _messages.add(ChatMessage(text: question, isUser: true));
-      _messages.add(ChatMessage(text: "Thinking...", isUser: false, isTyping: true));
-    });
-    _scrollToBottom();
-    final int botMessageIndex = _messages.length - 1;
-    Future.delayed(const Duration(seconds: 1), () {
-      _simulateTyping(answer, botMessageIndex);
-    });
-  }
-
-  /// Handles the send button press: adds the user's message and simulates a bot response.
-  void _handleSend() {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
-    setState(() {
-      _messages.add(ChatMessage(text: text, isUser: true));
-      _messageController.clear();
-      _messages.add(ChatMessage(text: "Thinking...", isUser: false, isTyping: true));
-    });
-    _scrollToBottom();
-    final int botMessageIndex = _messages.length - 1;
-    Future.delayed(const Duration(seconds: 1), () {
-      _simulateTyping("I'm processing your query...", botMessageIndex);
-    });
-  }
-
-  /// Simulates the bot typing letter-by-letter.
-  void _simulateTyping(String fullResponse, int messageIndex) {
-    int currentIndex = 0;
-    Timer.periodic(const Duration(milliseconds: 40), (timer) {
-      if (currentIndex < fullResponse.length) {
-        setState(() {
-          _messages[messageIndex].text = fullResponse.substring(0, currentIndex + 1);
-        });
-        currentIndex++;
-        _scrollToBottom();
-      } else {
-        timer.cancel();
-        setState(() {
-          _messages[messageIndex].isTyping = false;
-        });
-        _scrollToBottom();
-      }
-    });
   }
 }
