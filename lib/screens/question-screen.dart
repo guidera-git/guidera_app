@@ -5,11 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:guidera_app/services/api_service.dart';
 import 'package:guidera_app/screens/result_loading_screen.dart';
-import 'package:guidera_app/screens/result-screen.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
-
+import 'package:guidera_app/screens/question-screen.dart';
 import '../Widgets/header.dart';
 
 /// Model class for questions loaded from API
@@ -17,7 +16,7 @@ class Question {
   final String id;
   final String questionText;
   final List<String> options;
-  final String correctAnswer;
+  final String correctAnswer; // note: for the initial fetch this is blank
   String? selectedOption;
 
   Question({
@@ -34,7 +33,10 @@ class Question {
       questionText: json['question']?.toString() ?? '',
       options: (json['options'] as List<dynamic>?)
           ?.map((o) => o.toString())
-          .toList() ?? [],
+          .toList() ??
+          [],
+      // When the server returns the “new test,” there is no correct_ans field.
+      // So we default to empty string here.
       correctAnswer: json['correct_ans']?.toString() ?? '',
     );
   }
@@ -48,7 +50,7 @@ class QuestionProvider extends ChangeNotifier {
   bool isLoading = true;
   bool submitting = false;
   int progress = 0;
-  String timeLeft = '02:00';
+  String timeLeft = '00:30';
   late Timer _timer;
   final ApiService _apiService = ApiService();
 
@@ -87,15 +89,18 @@ class QuestionProvider extends ChangeNotifier {
   }
 
   void _updateProgress() {
-    final answered = questions.where((q) => q.selectedOption != null).length;
+    final answered =
+        questions.where((q) => q.selectedOption != null).length;
     progress = ((answered / questions.length) * 100).toInt();
   }
 
   void _startTimer() {
-    int totalTime = 120;
+    int totalTime = 30;
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (totalTime <= 0) {
         timer.cancel();
+        timeLeft = '00:00';
+        notifyListeners();
       } else {
         totalTime--;
         final minutes = (totalTime ~/ 60).toString().padLeft(2, '0');
@@ -105,6 +110,7 @@ class QuestionProvider extends ChangeNotifier {
       }
     });
   }
+
 
   @override
   void dispose() {
@@ -117,6 +123,7 @@ class QuestionProvider extends ChangeNotifier {
     submitting = true;
     notifyListeners();
 
+    // Build the answers map: { questionId: selectedOption, … }
     final answers = <String, String>{
       for (var q in questions)
         if (q.selectedOption != null) q.id: q.selectedOption!,
@@ -125,31 +132,23 @@ class QuestionProvider extends ChangeNotifier {
     try {
       final resp = await _apiService.submitTest(attemptId, answers);
       if (resp.statusCode == 200) {
+        // On successful submission, push the loader screen.
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => ResultLoaderScreen(
-              onLoaderComplete: () async {
-                final resultResp = await _apiService.getTestResult(attemptId);
-                final resultData = jsonDecode(resultResp.body);
-                // Navigator.pushReplacement(
-                //   context,
-                //   MaterialPageRoute(
-                //     builder: (_) => ResultsScreen(
-                //       totalScore: resultData['attempt']['score'] as int,
-                //       grade: '',
-                //       subjectName: subjectName,
-                //       explanations: resultData['results'] as List<dynamic>,
-                //     ),
-                //   ),
-                // );
-              },
+              attemptId: attemptId,
+              subjectName: subjectName,
             ),
           ),
         );
       } else {
+        // If submission failed, show a SnackBar
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Submission failed: ${resp.statusCode}')),
+          SnackBar(
+              content: Text(
+                  'Submission failed: ${resp.statusCode}')),
+
         );
       }
     } catch (e) {
@@ -167,7 +166,7 @@ class QuestionProvider extends ChangeNotifier {
 class QuestionScreen extends StatefulWidget {
   final String subjectName;
   final String attemptId;
-  final List<dynamic> questions;
+  final List<dynamic> questions; // raw JSON from backend
 
   const QuestionScreen({
     Key? key,
@@ -195,7 +194,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
     final resp = await _apiService.getProfile();
     if (resp.statusCode == 200) {
       final data = jsonDecode(resp.body);
-      setState(() => userName = data['fullName'] as String? ?? '');
+      setState(() => userName = data['fullname'] as String? ?? '');
     }
   }
 
@@ -211,27 +210,58 @@ class _QuestionScreenState extends State<QuestionScreen> {
         ),
         child: Consumer<QuestionProvider>(
           builder: (context, provider, child) {
-            if (provider.isLoading) return const Center(child: CircularProgressIndicator());
+            if (provider.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-            final allAttempted = provider.questions.every((q) => q.selectedOption != null);
+            if (provider.timeLeft == '00:00') {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TimeUpScreen(
+                      subjectName: widget.subjectName,
+                    ),
+                  ),
+                );
+              });
+              return Container();
+            }
+
+            final allAttempted =
+            provider.questions.every((q) => q.selectedOption != null);
 
             return Stack(
               children: [
                 Column(
                   children: [
-                    const SizedBox(height: 120, child: GuideraHeader()),
+                    const SizedBox(
+                        height: 120, child: GuideraHeader()),
                     // Subject title & timer
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      padding:
+                      const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(widget.subjectName, style: TextStyle(color: AppColors.myWhite, fontSize: 20, fontWeight: FontWeight.bold)),
+                          Text(widget.subjectName,
+                              style: TextStyle(
+                                  color: AppColors.myWhite,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold)),
                           Row(
                             children: [
-                              SvgPicture.asset('assets/images/timer.svg', width: 20, height: 20, color: AppColors.myWhite),
+                              SvgPicture.asset(
+                                  'assets/images/timer.svg',
+                                  width: 20,
+                                  height: 20,
+                                  color: AppColors.myWhite),
                               const SizedBox(width: 8),
-                              Text(provider.timeLeft, style: TextStyle(color: AppColors.myWhite, fontSize: 16)),
+                              Text(provider.timeLeft,
+                                  style: TextStyle(
+                                      color: AppColors.myWhite,
+                                      fontSize: 16)),
                             ],
                           ),
                         ],
@@ -245,7 +275,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
                         child: LinearProgressIndicator(
                           value: provider.progress / 100,
                           backgroundColor: AppColors.myWhite,
-                          valueColor: AlwaysStoppedAnimation(AppColors.darkBlue),
+                          valueColor: AlwaysStoppedAnimation(
+                              AppColors.darkBlue),
                           minHeight: 12,
                         ),
                       ),
@@ -260,25 +291,46 @@ class _QuestionScreenState extends State<QuestionScreen> {
                               .entries
                               .map((entry) {
                             final idx = entry.key;
-                            final q = entry.value;
+                            final q = entry.value as Question;
                             return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                              padding:
+                              const EdgeInsets.symmetric(
+                                  horizontal: 16.0,
+                                  vertical: 8.0),
                               child: Card(
                                 color: AppColors.lightBlack,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                    BorderRadius.circular(16)),
                                 child: Padding(
-                                  padding: const EdgeInsets.all(12.0),
+                                  padding:
+                                  const EdgeInsets.all(12.0),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
                                     children: [
-                                      Text('Q${idx + 1}. ${q.questionText}', style: TextStyle(color: AppColors.myWhite, fontSize: 17)),
-                                      ...q.options.map((opt) => RadioListTile<String>(
-                                        value: opt,
-                                        groupValue: q.selectedOption,
-                                        onChanged: (val) => provider.selectAnswer(idx, val!),
-                                        title: Text(opt, style: TextStyle(color: AppColors.myWhite)),
-                                        activeColor: AppColors.lightBlue,
-                                      )),
+                                      Text(
+                                          'Q${idx + 1}. ${q.questionText}',
+                                          style: TextStyle(
+                                              color:
+                                              AppColors.myWhite,
+                                              fontSize: 17)),
+                                      ...q.options.map(
+                                              (opt) =>
+                                              RadioListTile<String>(
+                                                value: opt,
+                                                groupValue:
+                                                q.selectedOption,
+                                                onChanged: (val) =>
+                                                    provider.selectAnswer(
+                                                        idx, val!),
+                                                title: Text(opt,
+                                                    style: TextStyle(
+                                                        color: AppColors
+                                                            .myWhite)),
+                                                activeColor: AppColors
+                                                    .lightBlue,
+                                              )),
                                     ],
                                   ),
                                 ),
@@ -290,35 +342,72 @@ class _QuestionScreenState extends State<QuestionScreen> {
                     ),
                     // Honor pledge
                     Row(
+
                       children: [
+                        const SizedBox(height: 90),
                         Checkbox(
                           value: isChecked,
                           onChanged: allAttempted
-                              ? (val) => setState(() => isChecked = val!)
+                              ? (val) =>
+                              setState(() => isChecked = val!)
                               : null,
                           activeColor: AppColors.lightBlue,
                         ),
+
                         Expanded(
-                          child: Text(
-                            'I, $userName, understand that submitting work that isn\'t my own may result in failure or account deactivation.',
-                            style: TextStyle(color: AppColors.myWhite),
+                          child: RichText(
+                            text: TextSpan(
+                              // This default style applies to all spans that don’t override it:
+                              style: TextStyle(
+                                color: AppColors.myWhite,
+                                fontSize: 16, // (optional) match whatever font size you need
+                              ),
+                              children: [
+                                // Normal text before the username
+                                TextSpan(text: 'I, '),
+                                // Username span: bold + underlined
+                                TextSpan(
+                                  text: userName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                                // Remaining text after the username
+                                TextSpan(
+                                  text:
+                                  ', understand that submitting work that isn\'t my own may result in failure or account deactivation.',
+                                ),
+                              ],
+                            ),
                           ),
                         ),
+
                       ],
                     ),
                     // Submit button
                     Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.all(1.0),
                       child: ElevatedButton(
-                        onPressed: allAttempted && isChecked && !provider.submitting
+                        onPressed: allAttempted &&
+                            isChecked &&
+                            !provider.submitting
                             ? () => provider.submitAnswers(context)
                             : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.lightBlue,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10),
                         ),
                         child: provider.submitting
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                             : const Text('Submit'),
                       ),
                     ),
@@ -330,7 +419,12 @@ class _QuestionScreenState extends State<QuestionScreen> {
                   left: 23,
                   child: GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: SvgPicture.asset('assets/images/back.svg', height: 28, colorFilter: ColorFilter.mode(AppColors.myWhite, BlendMode.srcIn)),
+                    child: SvgPicture.asset(
+                        'assets/images/back.svg',
+                        height: 28,
+                        colorFilter: ColorFilter.mode(
+                            AppColors.myWhite,
+                            BlendMode.srcIn)),
                   ),
                 ),
                 // Custom scrollbar
@@ -341,13 +435,17 @@ class _QuestionScreenState extends State<QuestionScreen> {
                   width: 40,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final trackHeight = constraints.maxHeight;
+                      final trackHeight =
+                          constraints.maxHeight;
                       var y = trackHeight * provider.sliderPosition;
                       y = y.clamp(0.0, trackHeight - 20);
-                      final currentIdx =
-                      (provider.scrollController.offset / QuestionProvider.questionWidgetHeight)
+                      final currentIdx = (provider
+                          .scrollController.offset /
+                          QuestionProvider
+                              .questionWidgetHeight)
                           .round()
-                          .clamp(0, provider.questions.length - 1);
+                          .clamp(
+                          0, provider.questions.length - 1);
 
                       return Stack(
                         children: [
@@ -389,6 +487,73 @@ class _QuestionScreenState extends State<QuestionScreen> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+
+/// --------------------------------------------------------------------
+/// Paste this at the bottom of question-screen.dart (below the QuestionScreen class).
+/// --------------------------------------------------------------------
+class TimeUpScreen extends StatefulWidget {
+  final String subjectName;
+
+  const TimeUpScreen({
+    Key? key,
+    required this.subjectName,
+  }) : super(key: key);
+
+  @override
+  _TimeUpScreenState createState() => _TimeUpScreenState();
+}
+
+class _TimeUpScreenState extends State<TimeUpScreen> {
+
+  final ApiService _apiService = ApiService();
+
+
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.darkBlack,
+      appBar: AppBar(
+        backgroundColor: AppColors.darkBlack,
+        title: const Text(
+          'Time’s Up',
+          style: TextStyle(color: AppColors.myWhite),
+        ),
+        leading: IconButton(
+          icon: SvgPicture.asset(
+            'assets/images/back.svg',
+            color: AppColors.myWhite,
+            height: 30,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Time has ended!\nYou have failed this test.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.myWhite,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+            ],
+          ),
         ),
       ),
     );

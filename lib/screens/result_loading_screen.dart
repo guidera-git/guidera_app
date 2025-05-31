@@ -1,16 +1,23 @@
+// result_loading_screen.dart
+
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lottie/lottie.dart';
-import 'package:guidera_app/Widgets/header.dart'; // Your existing header component
-import 'package:guidera_app/theme/app_colors.dart'; // Your color constants
+import 'package:guidera_app/Widgets/header.dart';
+import 'package:guidera_app/theme/app_colors.dart';
+import 'package:guidera_app/services/api_service.dart';
+import 'package:guidera_app/screens/result-screen.dart';
 
 class ResultLoaderScreen extends StatefulWidget {
-  final VoidCallback onLoaderComplete; // Callback for navigation
+  final String attemptId;
+  final String subjectName;
 
   const ResultLoaderScreen({
     super.key,
-    required this.onLoaderComplete, // Accept callback as parameter
+    required this.attemptId,
+    required this.subjectName,
   });
 
   @override
@@ -26,33 +33,85 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
     "Almost there!",
     "Your result is ready!"
   ];
+  late Timer _messageTimer;
+  late Timer _fetchTimer;
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
     super.initState();
     _startMessageCycle();
+    _scheduleFetchResult();
   }
 
   void _startMessageCycle() {
-    Timer.periodic(const Duration(seconds: 3), (timer) {
+    _messageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (mounted) {
-        setState(() => _currentMessageIndex = (_currentMessageIndex + 1) % _messages.length);
-        if (timer.tick * 3 >= 15) {
-          timer.cancel();
-          _navigateAfterLoader();
-        }
+        setState(() => _currentMessageIndex =
+            (_currentMessageIndex + 1) % _messages.length);
       }
     });
   }
 
-  void _navigateAfterLoader() {
-    // Call the provided callback to handle navigation
-    widget.onLoaderComplete();
+  void _scheduleFetchResult() {
+    // After 15 seconds, cancel the message timer and fetch actual results.
+    _fetchTimer = Timer(const Duration(seconds: 15), () async {
+      _messageTimer.cancel();
+      await _navigateAfterLoader();
+    });
+  }
+
+  Future<void> _navigateAfterLoader() async {
+    try {
+      final resp = await _apiService.getTestResult(widget.attemptId);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        // data structure:
+        // {
+        //   "attempt": { "attempt_id": "...", "subject": "...", "started_at": "...", "completed_at": "...", "score": 80 },
+        //   "results": [ { "id": "...", "question": "...", "options": [...], "selected_ans": "...", "correct_ans": "...", "explanation": "...", "is_correct": true }, ... ]
+        // }
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResultsScreen(
+              subjectName: widget.subjectName,
+              attemptData: data['attempt'],
+              resultsList: data['results'] as List<dynamic>,
+            ),
+          ),
+        );
+      } else {
+        // If fetching results failed, pop back and show an error.
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to fetch results: ${resp.statusCode}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching results: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _messageTimer.cancel();
+    _fetchTimer.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDarkMode =
+        Theme.of(context).brightness == Brightness.dark;
     final iconColor = isDarkMode ? AppColors.myWhite : AppColors.myBlack;
 
     return Scaffold(
@@ -87,7 +146,7 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 50), // Add some spacing
+          const SizedBox(height: 50),
           _buildThinkingMessages(),
           const SizedBox(height: 40),
           _buildParticleAnimation(),
