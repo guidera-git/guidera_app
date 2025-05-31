@@ -457,7 +457,7 @@ class HomeTab extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                    const EntryTestScreen(subjectName: ""),
+                    const EntryTestScreen(),
                   ),
                 );
                 break;

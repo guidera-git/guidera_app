@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  static const _baseUrl = 'http://192.168.0.106:3000/api';
+  static const _baseUrl = 'http://192.168.0.109:3000/api';
   final _storage = const FlutterSecureStorage();
 
   // ───────────────────────────────────────────────────────────────────
@@ -16,7 +16,8 @@ class ApiService {
       final token = await _storage.read(key: 'token');
       if (token != null) headers['Authorization'] = 'Bearer $token';
     }
-    return http.post(Uri.parse('$_baseUrl$path'),
+    return http.post(
+      Uri.parse('$_baseUrl$path'),
       headers: headers,
       body: jsonEncode(body),
     );
@@ -37,7 +38,8 @@ class ApiService {
       final token = await _storage.read(key: 'token');
       if (token != null) headers['Authorization'] = 'Bearer $token';
     }
-    return http.patch(Uri.parse('$_baseUrl$path'),
+    return http.patch(
+      Uri.parse('$_baseUrl$path'),
       headers: headers,
       body: jsonEncode(body),
     );
@@ -78,7 +80,7 @@ class ApiService {
   }
 
   // ───────────────────────────────────────────────────────────────────
-  // New: Multipart uploads for photos
+  // Multipart uploads for photos
 
   /// Upload a new profile photo via multipart/form-data
   Future<http.Response> uploadProfilePhoto(File file) async {
@@ -91,7 +93,6 @@ class ApiService {
     request.files.add(await http.MultipartFile.fromPath(
       'profilephoto',
       file.path,
-      // optionally: contentType: MediaType('image', 'jpeg'),
     ));
     final streamed = await request.send();
     return http.Response.fromStream(streamed);
@@ -108,11 +109,13 @@ class ApiService {
     request.files.add(await http.MultipartFile.fromPath(
       'backgroundphoto',
       file.path,
-      // optionally: contentType: MediaType('image', 'png'),
     ));
     final streamed = await request.send();
     return http.Response.fromStream(streamed);
   }
+
+  // ───────────────────────────────────────────────────────────────────
+  // Degree recommendation
 
   /// Call degree recommendation endpoint
   Future<http.Response> predictDegree(Map<String, dynamic> body) {
@@ -123,7 +126,9 @@ class ApiService {
     );
   }
 
+  // ───────────────────────────────────────────────────────────────────
   // Chatbot message
+
   /// Sends a user message to the chatbot endpoint and returns the assistant's reply
   Future<String> sendMessage(String message) async {
     final response = await post(
@@ -138,5 +143,38 @@ class ApiService {
     } else {
       throw Exception('Failed to send message: \${response.statusCode}');
     }
+  }
+
+  // ───────────────────────────────────────────────────────────────────
+  // Test-specific methods
+
+  /// Start a new test attempt and fetch random questions for a subject
+  /// Returns the response containing attemptId, startedAt, and questions list
+  Future<http.Response> startTest(String subject) async {
+    return get(
+      '/tests/$subject',
+      auth: true,
+    );
+  }
+
+  /// Submit answers for a test attempt
+  /// [answers] should be a Map<QuestionId, SelectedOption>
+  Future<http.Response> submitTest(
+      String attemptId,
+      Map<String, String> answers,
+      ) async {
+    return post(
+      '/tests/$attemptId/submit',
+      {'answers': answers},
+      auth: true,
+    );
+  }
+
+  /// Retrieve test results including explanations and user's answers
+  Future<http.Response> getTestResult(String attemptId) async {
+    return get(
+      '/tests/$attemptId/result',
+      auth: true,
+    );
   }
 }

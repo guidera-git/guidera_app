@@ -1,3 +1,6 @@
+// result-screen.dart
+
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/screens/question-screen.dart';
@@ -6,57 +9,69 @@ import 'package:guidera_app/Widgets/header.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:guidera_app/services/api_service.dart';
 
-import 'entrytest-screen.dart';
-
-// Placeholder for the ReviewAnswersScreen.
-// Replace with your actual implementation.
-class ReviewAnswersScreen extends StatelessWidget {
-  const ReviewAnswersScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBlack,
-      appBar: AppBar(
-        backgroundColor: AppColors.darkBlack,
-        elevation: 0,
-        leading: IconButton(
-          icon: SvgPicture.asset(
-            "assets/images/back.svg",
-            color: AppColors.myWhite,
-            height: 30,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text("Review Answers", style: TextStyle(color: AppColors.myWhite)),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Text(
-          "Review Answers Content Here",
-          style: TextStyle(color: AppColors.myWhite, fontSize: 20),
-        ),
-      ),
-    );
-  }
-}
-
-class ResultsScreen extends StatelessWidget {
-  final int totalScore;
-  final String grade;
+/// Screen that displays overall test percentage, grade, and details.
+/// Also offers “Review Answers” and “Try Again” functionality.
+class ResultsScreen extends StatefulWidget {
   final String subjectName;
-
+  final Map<String, dynamic> attemptData;
+  final List<dynamic> resultsList;
 
   const ResultsScreen({
     Key? key,
-    required this.totalScore,
-    required this.grade,
     required this.subjectName,
-
+    required this.attemptData,
+    required this.resultsList,
   }) : super(key: key);
 
-  // Helper to choose dynamic color for the grade letter.
+  @override
+  State<ResultsScreen> createState() => _ResultsScreenState();
+
+}
+
+class _ResultsScreenState extends State<ResultsScreen> {
+  late int totalQuestions;
+  late int correctCount;
+  late double percentage; // 0.0–1.0
+  late String gradeLetter;
+  late String formattedDate; // “MMM dd, yyyy • hh:mm a”
+  final ApiService _apiService = ApiService();
+  bool isRetrying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _computeResults();
+  }
+
+  void _computeResults() {
+    totalQuestions = widget.resultsList.length;
+    correctCount = widget.resultsList
+        .where((res) => (res['is_correct'] == true))
+        .length;
+    percentage = totalQuestions > 0
+        ? correctCount / totalQuestions
+        : 0.0;
+
+    // Compute letter grade from percentage
+    if (percentage >= 0.8) {
+      gradeLetter = "A";
+    } else if (percentage >= 0.6) {
+      gradeLetter = "B";
+    } else if (percentage >= 0.4) {
+      gradeLetter = "C";
+    } else if (percentage >= 0.2) {
+      gradeLetter = "D";
+    } else {
+      gradeLetter = "F";
+    }
+
+    // Format the current date/time
+    formattedDate =
+        DateFormat("MMM dd, yyyy  •  hh:mm a").format(DateTime.now());
+  }
+
   Color getGradeColor(String grade) {
     switch (grade.toUpperCase()) {
       case "A":
@@ -74,26 +89,62 @@ class ResultsScreen extends StatelessWidget {
     }
   }
 
-  // Helper to choose a performance message based on percentage.
-  String getPerformanceMessage(double percentage) {
-    if (percentage >= 0.8) {
+  String getPerformanceMessage(double pct) {
+    if (pct >= 0.8) {
       return "Excellent performance!";
-    } else if (percentage >= 0.6) {
+    } else if (pct >= 0.6) {
       return "Good effort, keep improving!";
     } else {
       return "Needs improvement, try harder!";
     }
   }
 
+  Future<void> _retryTest() async {
+    setState(() {
+      isRetrying = true;
+    });
+
+    try {
+      final resp = await _apiService.startTest(widget.subjectName);
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        // data = { "attemptId": "...", "startedAt": "...", "questions": [ {...}, ... ] }
+        final String newAttemptId = data['attemptId'];
+        final List<dynamic> newQuestions = data['questions'];
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => QuestionScreen(
+                subjectName: widget.subjectName,
+                attemptId: newAttemptId,
+                questions: newQuestions,
+              ),
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start a new test: ${resp.statusCode}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error starting new test: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isRetrying = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Assuming 10 questions per test.
-    final int totalQuestions = 10;
-    final double percentage = totalScore / totalQuestions;
-    // Format current date and time.
-    final String formattedDate = DateFormat("MMM dd, yyyy  •  hh:mm a").format(DateTime.now());
-    final String performanceMessage = getPerformanceMessage(percentage);
-    final bool showTryAgain = grade.toUpperCase() == "F";
+    final bool showTryAgain = gradeLetter.toUpperCase() == "F";
 
     return Scaffold(
       backgroundColor: AppColors.darkBlack,
@@ -112,10 +163,8 @@ class ResultsScreen extends StatelessWidget {
                   height: 30,
                 ),
                 onPressed: () {
-                  // Navigator.pushReplacement(
-                  //   context,
-                  //   MaterialPageRoute(builder: (_) => const EntryTestScreen(subjectName: '')),
-                  // );
+                  // Simply pop to go back to previous screen (e.g. entry test list).
+                  Navigator.pop(context);
                 },
               ),
             ),
@@ -126,14 +175,15 @@ class ResultsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Subject Name, Date/Time, User Name and Performance Message.
+            // Subject Name, Date/Time, Performance Message.
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    subjectName,
+                    widget.subjectName,
                     style: const TextStyle(
                       color: AppColors.myWhite,
                       fontSize: 24,
@@ -159,7 +209,7 @@ class ResultsScreen extends StatelessWidget {
                       ),
                       children: [
                         TextSpan(
-                          text: performanceMessage,
+                          text: getPerformanceMessage(percentage),
                           style: const TextStyle(
                             fontSize: 20,
                             fontStyle: FontStyle.italic,
@@ -175,7 +225,6 @@ class ResultsScreen extends StatelessWidget {
             ),
 
             Center(
-              // Reduced circular progress indicator.
               child: CircularPercentIndicator(
                 radius: 120,
                 lineWidth: 12,
@@ -190,13 +239,13 @@ class ResultsScreen extends StatelessWidget {
                   ),
                 ),
                 circularStrokeCap: CircularStrokeCap.round,
-                progressColor: percentage >= 0.6 ? Colors.greenAccent : Colors.redAccent,
+                progressColor:
+                percentage >= 0.6 ? Colors.greenAccent : Colors.redAccent,
                 backgroundColor: Colors.grey.shade800,
               ),
             ),
             const SizedBox(height: 20),
             Center(
-              // Grade text with dynamic colored grade letter.
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -209,9 +258,9 @@ class ResultsScreen extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    grade,
+                    gradeLetter,
                     style: TextStyle(
-                      color: getGradeColor(grade),
+                      color: getGradeColor(gradeLetter),
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -234,15 +283,17 @@ class ResultsScreen extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildDetailItem("Correct", totalScore, Colors.greenAccent),
-                      _buildDetailItem("Incorrect", totalQuestions - totalScore, Colors.redAccent),
+                      _buildDetailItem(
+                          "Correct", correctCount, Colors.greenAccent),
+                      _buildDetailItem("Incorrect",
+                          totalQuestions - correctCount, Colors.redAccent),
                     ],
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            // Separate Card for Performance Chart.
+            // Performance Chart
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Card(
@@ -256,62 +307,54 @@ class ResultsScreen extends StatelessWidget {
                   child: SizedBox(
                     height: 200,
                     child: PerformanceChart(
-                      correct: totalScore,
-                      incorrect: totalQuestions - totalScore,
+                      correct: correctCount,
+                      incorrect: totalQuestions - correctCount,
                     ),
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 30),
-            // Call-to-Action buttons: Review Answers and Try Again.
-        // Determine if "Try Again" should be shown.
-
-
-// Call-to-Action buttons: always show "Review Answers", and show "Try Again" conditionally.
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-
-                if (showTryAgain) ...[
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          // Navigate to the QuestionScreen for the respective subject.
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => QuestionScreen(subjectName: subjectName),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.refresh, color: Colors.white),
-                        label: const Text("Try Again"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.darkBlue,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+            // Call-to-Action buttons: Review Answers and Try Again
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Always show REVIEW ANSWERS
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ReviewAnswersScreen(
+                            subjectName: widget.subjectName,
+                            resultsList: widget.resultsList,
                           ),
                         ),
+                      );
+                    },
+                    icon: const Icon(Icons.visibility, color: Colors.white),
+                    label: const Text("Review Answers"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.darkBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
+
                 ],
-              ],
+              ),
             ),
-    const SizedBox(height: 30),
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 
-  // Helper widget for displaying detail items.
   Widget _buildDetailItem(String label, int value, Color color) {
     return Column(
       children: [
@@ -336,7 +379,7 @@ class ResultsScreen extends StatelessWidget {
   }
 }
 
-// PerformanceChart widget using fl_chart to display a simple bar chart.
+/// PerformanceChart widget using fl_chart to display a simple bar chart.
 class PerformanceChart extends StatelessWidget {
   final int correct;
   final int incorrect;
@@ -363,7 +406,8 @@ class PerformanceChart extends StatelessWidget {
               getTitlesWidget: (value, meta) {
                 return Text(
                   value.toInt().toString(),
-                  style: TextStyle(color: AppColors.myWhite, fontSize: 12),
+                  style: TextStyle(
+                      color: AppColors.myWhite, fontSize: 12),
                 );
               },
             ),
@@ -384,15 +428,18 @@ class PerformanceChart extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
                     title,
-                    style: TextStyle(color: AppColors.myWhite, fontSize: 12),
+                    style: TextStyle(
+                        color: AppColors.myWhite, fontSize: 12),
                   ),
                 );
               },
               reservedSize: 30,
             ),
           ),
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(
+              sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
         gridData: FlGridData(show: false),
@@ -420,6 +467,143 @@ class PerformanceChart extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A new screen that displays each attempted question, shows the user’s selected answer,
+/// highlights the correct answer, and prints the one-line explanation underneath.
+class ReviewAnswersScreen extends StatelessWidget {
+  final String subjectName;
+  final List<dynamic> resultsList;
+
+  const ReviewAnswersScreen({
+    Key? key,
+    required this.subjectName,
+    required this.resultsList,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.darkBlack,
+      appBar: AppBar(
+        backgroundColor: AppColors.darkBlack,
+        elevation: 0,
+        leading: IconButton(
+          icon: SvgPicture.asset(
+            "assets/images/back.svg",
+            color: AppColors.myWhite,
+            height: 30,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text("Review Answers",
+            style: TextStyle(color: AppColors.myWhite)),
+        centerTitle: true,
+      ),
+      body: ListView.builder(
+        itemCount: resultsList.length,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        itemBuilder: (context, index) {
+          final res = resultsList[index] as Map<String, dynamic>;
+          final questionText = res['question'] as String;
+          final options =
+          (res['options'] as List<dynamic>).cast<String>();
+          final selectedAns = res['selected_ans'] as String;
+          final correctAns = res['correct_ans'] as String;
+          final explanation = res['explanation'] as String;
+          final isCorrect = res['is_correct'] as bool;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16.0, vertical: 8.0),
+            child: Card(
+              color: AppColors.lightBlack,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Q${index + 1}. $questionText',
+                      style: TextStyle(
+                          color: AppColors.myWhite,
+                          fontSize: 17),
+                    ),
+                    const SizedBox(height: 8),
+                    ...options.map((opt) {
+                      Color textColor = AppColors.myWhite;
+                      if (opt == correctAns) {
+                        textColor = Colors.greenAccent;
+                      } else if (opt == selectedAns &&
+                          selectedAns != correctAns) {
+                        textColor = Colors.redAccent;
+                      }
+                      return Padding(
+                        padding:
+                        const EdgeInsets.symmetric(
+                            vertical: 2.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              opt == selectedAns
+                                  ? Icons.radio_button_checked
+                                  : Icons
+                                  .radio_button_unchecked,
+                              color: opt == correctAns
+                                  ? Colors.greenAccent
+                                  : opt == selectedAns &&
+                                  selectedAns !=
+                                      correctAns
+                                  ? Colors.redAccent
+                                  : AppColors.myGray,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                opt,
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Explanation: $explanation',
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 14,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      isCorrect
+                          ? 'You answered correctly.'
+                          : 'Your answer was incorrect.',
+                      style: TextStyle(
+                        color:
+                        isCorrect ? Colors.greenAccent : Colors.redAccent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
