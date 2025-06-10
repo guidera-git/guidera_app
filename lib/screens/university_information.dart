@@ -5,12 +5,15 @@ import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
 import 'package:guidera_app/widgets/fancy_bottom_nav_bar.dart';
 import 'package:guidera_app/widgets/fancy_nav_item.dart';
+import 'package:guidera_app/models/program.dart';
 import 'SavedUniversitiesScreen.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class UniversityInformation extends StatefulWidget {
-  const UniversityInformation({Key? key}) : super(key: key);
+  final Program program;
+
+  const UniversityInformation({Key? key, required this.program}) : super(key: key);
 
   @override
   State<UniversityInformation> createState() => _UniversityInformationState();
@@ -24,7 +27,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
   final List<String> chipLabels = [
     'Overview',
     'Course Detail',
-    'Requirement',
+    'Requirements',
     'Registration',
     'Fee',
     'About University',
@@ -54,11 +57,12 @@ class _UniversityInformationState extends State<UniversityInformation> {
   List<Map<String, String>> _generateOverviewItems() {
     return [
       {
-        'Total Fees': '1,300,000 PKR',
-        'Deadline Date': 'July 15, 2024',
-        'University Link': 'https://www.ucp.edu.pk',
-        'Total Duration': '8 Semesters (4 Years)',
-        'Accreditation': 'Approved by HEC & PEC',
+        'Total Fees': widget.program.formattedTotalFee,
+        'Duration': widget.program.durationInSemesters,
+        'Credit Hours': widget.program.creditHours,
+        'Location': widget.program.location,
+        'University Link': widget.program.mainLink ?? 'N/A',
+        'QS Ranking': widget.program.qsRanking ?? 'Not Ranked',
       },
     ];
   }
@@ -66,37 +70,45 @@ class _UniversityInformationState extends State<UniversityInformation> {
   List<Map<String, String>> _generateCourseDetails() {
     return [
       {
-        'Programme Name': 'BSSE',
-        'Program Link': 'https://ucp.edu.pk/bs-software-engineering',
-        'Credit Hours': '133',
-        'Duration': '8 semesters',
-        'Course Type': 'Undergraduate',
-        'Degree Awarded': 'Bachelor of Software Engineering',
+        'Program Name': widget.program.programTitle,
+        'Program Key': widget.program.programKey ?? 'N/A',
+        'Credit Hours': widget.program.creditHours,
+        'Duration': widget.program.programDuration,
+        'Course Outline': widget.program.courseOutline ?? 'N/A',
+        'Description': widget.program.programDescription.length > 200
+            ? '${widget.program.programDescription.substring(0, 200)}...'
+            : widget.program.programDescription,
       }
     ];
   }
 
   List<Map<String, String>> _generateRequirements() {
-    return [
-      {
-        'FSC Pre-Medical': '50% Marks',
-        'FSC Pre-Engineering': '50% Marks',
-        'ICS Physics': '50% Marks',
-        'Entry Test': 'Pass Required',
-      },
-    ];
+    final criteria = widget.program.admissionCriteria ?? [];
+    Map<String, String> requirements = {};
+
+    for (int i = 0; i < criteria.length; i++) {
+      requirements['Requirement ${i + 1}'] = criteria[i].criteria;
+    }
+
+    if (requirements.isEmpty) {
+      requirements['Requirements'] = 'No specific requirements listed';
+    }
+
+    return [requirements];
   }
 
   List<Map<String, String>> _generateRegistrationInfo() {
+    final dates = widget.program.importantDates?.isNotEmpty == true
+        ? widget.program.importantDates!.first
+        : null;
+
     return [
       {
-        'Application Submission Deadline': 'July 5 (Fri)',
-        'Admission Test (ECAT) Deadline': 'Jul 8 (Mon) - Jul 19 (Fri)',
-        'Financial Aid Application Deadline': 'N/A',
-        'SAT Deadline': 'Jul 23 (Tue)',
-        'Commencement of Classes': 'Aug 19 (Mon)',
-        'Last Registration Date': 'July 30 (Tue)',
-        'University Website': 'https://admissions.ucp.edu.pk'
+        'Application Deadline': dates?.deadlineApplicationSubmission ?? 'N/A',
+        'Admission Test Deadline': dates?.deadlineAdmissionTestECAT ?? 'N/A',
+        'Classes Start': dates?.commencementOfClasses ?? 'N/A',
+        'SAT Deadline': dates?.deadlineSAT ?? 'N/A',
+        'ACT Deadline': dates?.deadlineACT ?? 'N/A',
       },
     ];
   }
@@ -104,8 +116,13 @@ class _UniversityInformationState extends State<UniversityInformation> {
   List<Map<String, String>> _generateFeeDetails() {
     return [
       {
-        'Per credit hour': '10,000 PKR',
-        'Total Fee': '1,300,000 PKR',
+        'Total Tuition Fee': widget.program.fee.isNotEmpty
+            ? widget.program.fee.first.totalTutionFee
+            : 'N/A',
+        'Per Credit Hour Fee': widget.program.fee.isNotEmpty
+            ? widget.program.fee.first.perCreditHourFee
+            : 'N/A',
+        'Total Program Cost': widget.program.formattedTotalFee,
       },
     ];
   }
@@ -113,28 +130,33 @@ class _UniversityInformationState extends State<UniversityInformation> {
   List<Map<String, String>> _generateUniversityInfo() {
     return [
       {
-        'university_title': 'University of Central Punjab',
-        'introduction': 'The National University of Computer & Emerging Sciences has the honor of being the first multi-campus private sector university set up under the Federal Charter granted by Ordinance No.XXIII of 2000, dated July 01, 2000.',
-        'main_link': 'https://www.ucp.edu.pk',
-        'ranking': 'Top 10 in Punjab',
-        'info_email': 'https://online-admissions.ucp.edu.pk/',
-        'Phone': '+92 42 35880007',
-        'instagram': 'https://www.instagram.com/ucpofficial/',
-        'facebook': 'https://www.facebook.com/UCPofficial',
-        'twitter': 'https://www.twitter.com/FastNuOfficial',
+        'University Name': widget.program.universityTitle,
+        'Introduction': widget.program.introduction?.length != null && widget.program.introduction!.length > 300
+            ? '${widget.program.introduction!.substring(0, 300)}...'
+            : widget.program.introduction ?? 'No introduction available',
+        'Main Website': widget.program.mainLink ?? 'N/A',
+        'QS Ranking': widget.program.qsRanking ?? 'Not Ranked',
+        'Contact Email': widget.program.contactDetails?.infoEmail ?? 'N/A',
+        'Phone': widget.program.contactDetails?.call ?? 'N/A',
+        'Facebook': widget.program.socialLinks?.facebook ?? 'N/A',
+        'Twitter': widget.program.socialLinks?.twitter ?? 'N/A',
+        'Instagram': widget.program.socialLinks?.instagram ?? 'N/A',
       },
     ];
   }
 
   void _shareApp(BuildContext context) {
-    // Replace with the actual information you want to share
-    String shareText = "Check out this university: [University Name]\n"
-        "Program: [Program Name]\n"
-        "Link: [University Website]";
+    String shareText = "Check out this university: ${widget.program.universityTitle}\n"
+        "Program: ${widget.program.programTitle}\n"
+        "Location: ${widget.program.location}\n"
+        "Fee: ${widget.program.formattedTotalFee}";
 
-    Share.share(shareText); // Opens the system share sheet
+    if (widget.program.mainLink != null) {
+      shareText += "\nLink: ${widget.program.mainLink}";
+    }
+
+    Share.share(shareText);
   }
-
 
   Future<List<Map<String, String>>> _fetchSectionData(int index) async {
     await Future.delayed(const Duration(milliseconds: 500));
@@ -162,15 +184,13 @@ class _UniversityInformationState extends State<UniversityInformation> {
       color: AppColors.myWhite,
       child: Stack(
         children: [
-          // Background SVG Image
+          // Background Image
           Positioned.fill(
             child: Opacity(
               opacity: 0.5,
               child: Image.asset(
                 "assets/images/globe.jpg",
                 fit: BoxFit.cover,
-
-                // Adjust the image to cover the card
               ),
             ),
           ),
@@ -179,8 +199,8 @@ class _UniversityInformationState extends State<UniversityInformation> {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
-                const Text(
-                  "To activate the map, click on the \"Show map\" button. We would like to point out that data will be transmitted to OpenStreetMap after activation. You can find out more in our privacy policy. You can revoke your consent to the transmission of data at any time.",
+                Text(
+                  "To activate the map, click on the \"Show map\" button. We would like to point out that data will be transmitted to Google Maps after activation. You can find out more in our privacy policy. You can revoke your consent to the transmission of data at any time.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.myBlack,
@@ -197,7 +217,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                     ),
                   ),
                   onPressed: () {
-                    _openGoogleMaps(); // Reuse the existing function
+                    _openGoogleMaps();
                   },
                   child: const Text(
                     "Show Map",
@@ -239,10 +259,16 @@ class _UniversityInformationState extends State<UniversityInformation> {
           const SizedBox(width: 25),
           Expanded(
             flex: 6,
-            child: (label.contains('Link') || label.contains('Social Media') || label.contains('info_email'))
+            child: (label.toLowerCase().contains('link') ||
+                label.toLowerCase().contains('website') ||
+                label.toLowerCase().contains('outline') ||
+                label.toLowerCase().contains('email') ||
+                label.toLowerCase().contains('facebook') ||
+                label.toLowerCase().contains('twitter') ||
+                label.toLowerCase().contains('instagram'))
                 ? GestureDetector(
               onTap: () {
-                _launchURL(value); // Launch the URL
+                _launchURL(value);
               },
               child: Text(
                 value,
@@ -250,7 +276,6 @@ class _UniversityInformationState extends State<UniversityInformation> {
                   color: AppColors.myWhite,
                   fontSize: 14,
                   fontFamily: "ProductSans",
-
                   decoration: TextDecoration.underline,
                 ),
               ),
@@ -273,10 +298,19 @@ class _UniversityInformationState extends State<UniversityInformation> {
 
   /// Launches the given URL in the default browser.
   void _launchURL(String url) async {
-    if (await canLaunch(url)) {
-      await launch(url);
+    if (url == 'N/A') return;
+
+    String finalUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      finalUrl = 'https://$url';
+    }
+
+    if (await canLaunch(finalUrl)) {
+      await launch(finalUrl);
     } else {
-      throw "Could not launch $url";
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Could not launch $finalUrl")),
+      );
     }
   }
 
@@ -334,8 +368,8 @@ class _UniversityInformationState extends State<UniversityInformation> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                _openGoogleMaps(); // Open Google Maps with UCP location
-                Navigator.pop(context); // Close the bottom sheet
+                _openGoogleMaps();
+                Navigator.pop(context);
               },
               child: Text(
                 "Share Location",
@@ -353,9 +387,8 @@ class _UniversityInformationState extends State<UniversityInformation> {
 
   void _openGoogleMaps() async {
     print("Opening Google Maps...");
-    const double ucpLatitude = 31.4709;
-    const double ucpLongitude = 74.2660;
-    final String googleMapsUrl = "https://www.google.com/maps/search/?api=1&query=$ucpLatitude,$ucpLongitude";
+    final String query = Uri.encodeComponent("${widget.program.universityTitle} ${widget.program.location}");
+    final String googleMapsUrl = "https://www.google.com/maps/search/?api=1&query=$query";
     print("Google Maps URL: $googleMapsUrl");
 
     if (await canLaunch(googleMapsUrl)) {
@@ -388,7 +421,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                   children: [
                     Expanded(
                       child: Text(
-                        "Bachelors in Software\nEngineering",
+                        widget.program.programTitle,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -401,17 +434,17 @@ class _UniversityInformationState extends State<UniversityInformation> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: _toggleSave, // Call the toggle function
+                      onTap: _toggleSave,
                       child: Transform.translate(
                         offset: const Offset(8, 1),
                         child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300), // Animation duration
+                          duration: const Duration(milliseconds: 300),
                           transitionBuilder: (Widget child, Animation<double> animation) {
                             return ScaleTransition(scale: animation, child: child);
                           },
                           child: SvgPicture.asset(
                             isSaved ? "assets/images/filledsave.svg" : "assets/images/save.svg",
-                            key: ValueKey<bool>(isSaved), // Unique key for animation
+                            key: ValueKey<bool>(isSaved),
                             height: 34,
                             colorFilter: ColorFilter.mode(
                               AppColors.myWhite,
@@ -432,13 +465,16 @@ class _UniversityInformationState extends State<UniversityInformation> {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        Text(
-                          "University of Central Punjab",
-                          style: TextStyle(
-                            fontStyle: FontStyle.italic,
-                            color: AppColors.myWhite,
-                            fontSize: 16,
-                            fontFamily: "ProductSans",
+                        Expanded(
+                          child: Text(
+                            widget.program.universityTitle,
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              color: AppColors.myWhite,
+                              fontSize: 16,
+                              fontFamily: "ProductSans",
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Padding(
@@ -453,7 +489,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                           ),
                         ),
                         Text(
-                          "Lahore",
+                          widget.program.location,
                           style: TextStyle(
                             color: AppColors.darkGray,
                             fontSize: 16,
@@ -469,7 +505,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                         // Share Icon
                         GestureDetector(
                           onTap: () {
-                            _shareApp(context); // Share functionality
+                            _shareApp(context);
                           },
                           child: SvgPicture.asset(
                             "assets/images/share.svg",
@@ -484,7 +520,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                         // Map Icon
                         GestureDetector(
                           onTap: () {
-                            _showMapBottomSheet(context); // Map functionality
+                            _showMapBottomSheet(context);
                           },
                           child: SvgPicture.asset(
                             "assets/images/map.svg",

@@ -1,14 +1,18 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart';
-import 'package:guidera_app/models/university.dart';
+import 'package:guidera_app/models/program.dart';
 import 'package:guidera_app/screens/recommendation_loading_screen.dart';
 import 'package:guidera_app/screens/recommendation_results_screen.dart';
 import 'package:guidera_app/screens/saved_programs_screen.dart';
 import 'package:guidera_app/screens/university_information.dart';
 import 'package:guidera_app/screens/user_form.dart';
 import 'package:guidera_app/theme/app_colors.dart';
-
+import 'package:guidera_app/services/api_service.dart';
+import 'package:guidera_app/services/search_history_service.dart';
+import 'package:guidera_app/models/filter_options.dart';
 import 'home_screen.dart';
 
 class UniversitySearchScreen extends StatefulWidget {
@@ -19,52 +23,249 @@ class UniversitySearchScreen extends StatefulWidget {
 }
 
 class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
-  // Track selected universities by their id.
+  // Track selected programs by their id for comparison
   final Set<String> _selectedForComparison = {};
-  final List<University> _universities = [
-    University(
-      id: 'ucp',
-      name: 'UCP',
-      degree: 'BSSE',
-      beginning: 'Summer 2025',
-      feePerSem: 180000,
-      duration: 8,
-      location: 'Lahore',
-      rating: 4.5,
-    ),
-    University(
-      id: 'fast',
-      name: 'FAST NUCES',
-      degree: 'BSSE',
-      beginning: 'Summer 2025',
-      feePerSem: 140000,
-      duration: 8,
-      location: 'Abbottabad',
-      rating: 4.0,
-    ),
-    University(
-      id: 'comsats',
-      name: 'COMSATS',
-      degree: 'BSSE',
-      beginning: 'Summer 2025',
-      feePerSem: 110000,
-      duration: 8,
-      location: 'Islamabad',
-      rating: 4.2,
-    ),
-  ];
+  List<Program> _programs = [];
+  List<Program> _filteredPrograms = [];
+  List<String> _searchHistory = [];
+  bool _isLoading = false;
+  String _errorMessage = '';
+  Timer? _searchTimer;
 
   final TextEditingController _searchController = TextEditingController();
   FilterOptions _currentFilters = FilterOptions();
+  final ApiService _apiService = ApiService();
 
-  // Initial offset for the draggable compare button.
+  // Initial offset for the draggable compare button
   Offset _compareButtonOffset = const Offset(20, 500);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrograms();
+    _loadSearchHistory();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    _searchTimer?.cancel(); // FIXED: Cancel timer
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    // Cancel previous timer
+    _searchTimer?.cancel();
+
+    // Set new timer for debounced search (don't add to history yet)
+    _searchTimer = Timer(Duration(milliseconds: 500), () {
+      _performSearch();
+    });
+  }
+
+  Future<void> _loadSearchHistory() async {
+    final history = await SearchHistoryService.getSearchHistory();
+    setState(() {
+      _searchHistory = history;
+    });
+  }
+
+  Future<void> _addToSearchHistory(String searchTerm) async {
+    await SearchHistoryService.addSearchTerm(searchTerm);
+    _loadSearchHistory();
+  }
+
+  Future<void> _loadPrograms() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final response = await _apiService.filterPrograms(
+        location: _currentFilters.location,
+        universityTitle: _currentFilters.universityTitle,
+        programTitle: _currentFilters.programTitle,
+        minTotalFee: _currentFilters.minTotalFee > 0
+            ? _currentFilters.minTotalFee.toInt()
+            : null,
+        maxTotalFee: _currentFilters.maxTotalFee < 5000000
+            ? _currentFilters.maxTotalFee.toInt()
+            : null,
+      );
+
+      print('API returned: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        print('decoded.runtimeType = ${decoded.runtimeType}');
+
+        // FIXED: Handle the API response correctly
+        if (decoded is List) {
+          setState(() {
+            _programs = decoded
+                .map((json) => Program.fromMap(json as Map<String, dynamic>))
+                .toList();
+            _filteredPrograms = List.from(_programs);
+            _isLoading = false;
+          });
+
+          _performSearch(); // Perform initial search/filter
+        } else {
+          throw FormatException('Expected List but got ${decoded.runtimeType}');
+        }
+      } else if (response.statusCode == 401) {
+        _handleAuthenticationError();
+      } else {
+        setState(() {
+          _errorMessage = 'Failed to load programs: ${response.statusCode}';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error in _loadPrograms: $e');
+      setState(() {
+        _errorMessage = 'Error loading programs: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _handleAuthenticationError() {
+    // Show dialog to inform user about authentication issue
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Authentication Required'),
+          content: const Text(
+            'Your session has expired or you are not logged in. Please login to continue.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Navigate to login screen - replace with your actual login screen
+                // Navigator.pushReplacementNamed(context, '/login');
+              },
+              child: const Text('Login'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _loadProgramsWithoutAuth(); // Try loading without auth as fallback
+              },
+              child: const Text('Continue as Guest'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Fallback method to load programs without authentication
+  Future<void> _loadProgramsWithoutAuth() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      // Try to get universities first (might not require auth)
+      final response = await _apiService.getAllPrograms();
+
+      if (response.statusCode == 200) {
+        // If universities endpoint works, create sample programs
+        // This is a temporary fallback - you should implement proper guest access
+        setState(() {
+          _programs = _createSamplePrograms();
+          _filteredPrograms = List.from(_programs);
+          _isLoading = false;
+        });
+        _performSearch();
+      } else {
+        setState(() {
+          _errorMessage = 'Unable to load programs. Please check your connection and try again.';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _programs = _createSamplePrograms(); // Use sample data as last resort
+        _filteredPrograms = List.from(_programs);
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Create sample programs for fallback
+  List<Program> _createSamplePrograms() {
+    return [
+      Program(
+        id: '1',
+        programTitle: 'Bachelor of Software Engineering',
+        programDescription: 'A comprehensive program in software engineering with scholarship opportunities.',
+        programDuration: '4 years',
+        creditHours: '133',
+        fee: [Fee(totalTutionFee: '1,440,000 PKR', perCreditHourFee: '10,000 PKR')],
+        universityId: 'ucp',
+        universityTitle: 'University of Central Punjab',
+        location: 'Lahore',
+      ),
+      Program(
+        id: '2',
+        programTitle: 'Bachelor of Computer Science',
+        programDescription: 'A rigorous computer science program.',
+        programDuration: '4 years',
+        creditHours: '130',
+        fee: [Fee(totalTutionFee: '1,120,000 PKR', perCreditHourFee: '8,500 PKR')],
+        universityId: 'fast',
+        universityTitle: 'FAST National University',
+        location: 'Islamabad',
+      ),
+      Program(
+        id: '3',
+        programTitle: 'Bachelor of Business Administration',
+        programDescription: 'A comprehensive business program with financial aid available.',
+        programDuration: '4 years',
+        creditHours: '124',
+        fee: [Fee(totalTutionFee: '880,000 PKR', perCreditHourFee: '7,000 PKR')],
+        universityId: 'comsats',
+        universityTitle: 'COMSATS University',
+        location: 'Karachi',
+      ),
+    ];
+  }
+
+  void _performSearch() {
+    final query = _searchController.text.toLowerCase().trim();
+
+    if (query.isEmpty) {
+      setState(() {
+        _filteredPrograms = List.from(_programs);
+      });
+      return;
+    }
+
+    // FIXED: Don't add to history on every keystroke
+    // Only add when user submits or stops typing for meaningful searches
+
+    setState(() {
+      _filteredPrograms = _programs.where((program) {
+        return program.programTitle.toLowerCase().contains(query) ||
+            program.universityTitle.toLowerCase().contains(query) ||
+            program.location.toLowerCase().contains(query);
+      }).toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.myBlack,
-      // Custom AppBar using GuideraHeader with a back button.
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Stack(
@@ -81,7 +282,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
               Expanded(child: _buildBody()),
             ],
           ),
-          // Draggable Compare Button – appears only when at least 2 universities are selected.
+          // Draggable Compare Button – appears only when at least 2 programs are selected
           if (_selectedForComparison.length >= 2)
             Positioned(
               left: _compareButtonOffset.dx,
@@ -104,10 +305,10 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                     color: AppColors.myWhite,
                   ),
                   onPressed: () {
-                    final selectedUniversities = _universities
-                        .where((uni) => _selectedForComparison.contains(uni.id))
+                    final selectedPrograms = _filteredPrograms
+                        .where((program) => _selectedForComparison.contains(program.id))
                         .toList();
-                    _showComparisonPopup(selectedUniversities);
+                    _showComparisonPopup(selectedPrograms);
                   },
                 ),
               ),
@@ -117,101 +318,100 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(65),
-      child: Container(
-        color: AppColors.myBlack,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            IconButton(
-              icon: SvgPicture.asset(
-                'assets/images/back.svg',
-                width: 30,
+  Widget _buildAppBar() {
+    return Container(
+      color: AppColors.myBlack,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          IconButton(
+            icon: SvgPicture.asset(
+              'assets/images/back.svg',
+              width: 30,
+              color: AppColors.darkGray,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Container(
+              height: 45,
+              decoration: BoxDecoration(
                 color: AppColors.darkGray,
+                borderRadius: BorderRadius.circular(70),
               ),
-              onPressed: () {
-                if (Navigator.canPop(context)) {
-                  Navigator.pop(context);
-                } else {
-                  // Fallback: navigate to a default screen (e.g., HomeScreen)
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const HomeScreen()),
-                  );
-                }
-              },
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Container(
-                height: 45,
-                decoration: BoxDecoration(
-                  color: AppColors.darkGray,
-                  borderRadius: BorderRadius.circular(70),
-                ),
-                child: Stack(
-                  alignment: Alignment.centerLeft,
-                  children: [
-                    TextField(
-                      controller: _searchController,
-                      textAlign: TextAlign.justify,
-                      textAlignVertical: TextAlignVertical.center,
-                      decoration: InputDecoration(
-                        border: InputBorder.none,
-                        fillColor: Colors.black,
-                        contentPadding: const EdgeInsets.only(
-                          left: 15,
-                          top: 4,
-                          bottom: 8,
-                        ),
-                        hintText: 'Software Engineering',
-                        hintStyle: TextStyle(
-                          fontFamily: 'Product Sans',
-                          fontWeight: FontWeight.normal,
-                          color: AppColors.lightBlack,
-                          fontSize: 15,
-                        ),
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    textAlign: TextAlign.justify,
+                    textAlignVertical: TextAlignVertical.center,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      fillColor: Colors.black,
+                      contentPadding: const EdgeInsets.only(
+                        left: 15,
+                        top: 4,
+                        bottom: 8,
+                      ),
+                      hintText: 'Search programs or universities...',
+                      hintStyle: TextStyle(
+                        fontFamily: 'Product Sans',
+                        fontWeight: FontWeight.normal,
+                        color: AppColors.lightBlack,
+                        fontSize: 15,
                       ),
                     ),
-                    Positioned(
-                      right: 0,
-                      child: Row(
-                        children: [
-                          IconButton(
+                    onSubmitted: (value) {
+                      if (value.trim().isNotEmpty && value.trim().length >= 3) {
+                        _addToSearchHistory(value.trim());
+                        _performSearch();
+                      }
+                    },
+                  ),
+                  Positioned(
+                    right: 0,
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: SvgPicture.asset(
+                            'assets/images/filter.svg',
+                            width: 20,
+                            color: AppColors.myBlack,
+                          ),
+                          onPressed: _showFilters,
+                        ),
+                        Container(
+                          height: 35,
+                          margin: const EdgeInsets.only(right: 14),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightBlue,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: IconButton(
                             icon: SvgPicture.asset(
-                              'assets/images/filter.svg',
+                              'assets/images/send.svg',
                               width: 20,
-                              color: AppColors.myBlack,
+                              color: AppColors.myWhite,
                             ),
-                            onPressed: _showFilters,
+                            onPressed: () {
+                              final query = _searchController.text.trim();
+                              if (query.isNotEmpty) {
+                                _addToSearchHistory(query);
+                              }
+                              _performSearch();
+                            },
                           ),
-                          Container(
-                            height: 35,
-                            margin: const EdgeInsets.only(right: 14),
-                            decoration: BoxDecoration(
-                              color: AppColors.lightBlue,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: IconButton(
-                              icon: SvgPicture.asset(
-                                'assets/images/send.svg',
-                                width: 20,
-                                color: AppColors.myWhite,
-                              ),
-                              onPressed: () {},
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -223,66 +423,183 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: CustomScrollView(
             slivers: [
-              // History section.
+              // History section
               SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'History',
-                      style: TextStyle(
-                        color: AppColors.myGray,
-                        fontFamily: 'Product Sans',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildHistoryChip('BBA'),
-                        _buildHistoryChip('Electrical Engineering'),
-                        _buildHistoryChip('Dental'),
-                        _buildHistoryChip('Fashion Design'),
-                        _buildHistoryChip('ACCA'),
-                        _buildHistoryChip('MBBS'),
+                        Text(
+                          'History',
+                          style: TextStyle(
+                            color: AppColors.myGray,
+                            fontFamily: 'Product Sans',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (_searchHistory.isNotEmpty)
+                          TextButton(
+                            onPressed: () async {
+                              await SearchHistoryService.clearHistory();
+                              _loadSearchHistory();
+                            },
+                            child: Text(
+                              'Clear',
+                              style: TextStyle(
+                                color: AppColors.lightBlue,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+                    if (_searchHistory.isEmpty)
+                      Text(
+                        'No search history yet',
+                        style: TextStyle(
+                          color: AppColors.myGray.withOpacity(0.7),
+                          fontSize: 14,
+                        ),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _searchHistory.take(6).map((term) => _buildHistoryChip(term)).toList(),
+                      ),
                     const SizedBox(height: 20),
                   ],
                 ),
               ),
-              // University cards list.
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                    final uni = _universities[index];
-                    final isSelected = _selectedForComparison.contains(uni.id);
-                    return _buildUniversityCard(
-                      context, // Pass the context here
-                      university: uni,
-                      isSelected: isSelected,
-                      onCompareToggle: () {
-                        setState(() {
-                          if (isSelected) {
-                            _selectedForComparison.remove(uni.id);
-                          } else {
-                            _selectedForComparison.add(uni.id);
-                          }
-                        });
-                      },
-                    );
-                  },
-                  childCount: _universities.length,
+              // Loading indicator
+              if (_isLoading)
+                const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
                 ),
-              ),
-
+              // Error message
+              if (_errorMessage.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            _errorMessage,
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 16,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(
+                                onPressed: _loadPrograms,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.lightBlue,
+                                ),
+                                child: const Text('Retry'),
+                              ),
+                              const SizedBox(width: 16),
+                              ElevatedButton(
+                                onPressed: _loadProgramsWithoutAuth,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.grey,
+                                ),
+                                child: const Text('Continue as Guest'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              // Programs list
+              if (!_isLoading && _errorMessage.isEmpty)
+                _filteredPrograms.isEmpty
+                    ? SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            color: AppColors.myGray,
+                            size: 48,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No programs found matching your criteria.',
+                            style: TextStyle(
+                              color: AppColors.myGray,
+                              fontSize: 16,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              _searchController.clear();
+                              _currentFilters.reset();
+                              _loadPrograms();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.lightBlue,
+                            ),
+                            child: const Text('Clear Filters'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                    : SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                      final program = _filteredPrograms[index];
+                      final isSelected = _selectedForComparison.contains(program.id);
+                      return _buildProgramCard(
+                        context,
+                        program: program,
+                        isSelected: isSelected,
+                        onCompareToggle: () {
+                          setState(() {
+                            if (isSelected) {
+                              _selectedForComparison.remove(program.id);
+                            } else {
+                              _selectedForComparison.add(program.id);
+                            }
+                          });
+                        },
+                      );
+                    },
+                    childCount: _filteredPrograms.length,
+                  ),
+                ),
             ],
           ),
         ),
-        // "Recommend Me" button.
+        // "Recommend Me" button
         Positioned(
           bottom: 20,
           right: 20,
@@ -310,350 +627,74 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
             label: const Text('Recommend Me'),
           ),
         ),
-
       ],
     );
   }
 
   void _showFilters() {
-    final List<String> pakistaniCities = [
-      'Islamabad',
-      'Karachi',
-      'Lahore',
-      'Faisalabad',
-      'Rawalpindi',
-      'Multan',
-      'Gujranwala',
-      'Peshawar',
-      'Quetta',
-      'Sialkot',
-      'Bahawalpur',
-      'Sargodha',
-      'Sukkur',
-      'Larkana',
-      'Hyderabad'
-    ];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) =>
-          StatefulBuilder(
-            builder: (context, setState) =>
-                Container(
-                  height: MediaQuery
-                      .of(context)
-                      .size
-                      .height * 0.88,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(30)),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 20),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Filters',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                          IconButton(
-                            icon: SvgPicture.asset(
-                              'assets/images/close.svg',
-                              color: Colors.black,
-                              width: 24,
-                            ),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildFilterSection(
-                                title: 'Location',
-                                child: Container(
-                                  height: 150,
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  child: ListView.separated(
-                                    padding: const EdgeInsets.all(12),
-                                    itemCount: pakistaniCities.length,
-                                    separatorBuilder: (_, __) =>
-                                        Divider(color: Colors.black.withOpacity(
-                                            0.1)),
-                                    itemBuilder: (context, index) =>
-                                        InkWell(
-                                          onTap: () =>
-                                              setState(() =>
-                                              _currentFilters.location =
-                                              pakistaniCities[index]),
-                                          child: Row(
-                                            children: [
-                                              SvgPicture.asset(
-                                                'assets/images/location.svg',
-                                                width: 18,
-                                                color: _currentFilters
-                                                    .location ==
-                                                    pakistaniCities[index]
-                                                    ? AppColors.lightBlue
-                                                    : Colors.black,
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Text(
-                                                pakistaniCities[index],
-                                                style: TextStyle(
-                                                  color: _currentFilters
-                                                      .location ==
-                                                      pakistaniCities[index]
-                                                      ? AppColors.lightBlue
-                                                      : Colors.black,
-                                                  fontSize: 16,
-                                                  fontWeight: _currentFilters
-                                                      .location ==
-                                                      pakistaniCities[index]
-                                                      ? FontWeight.w600
-                                                      : FontWeight.normal,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                  ),
-                                ),
-                              ),
-                              _buildFilterSection(
-                                title: 'Minimum Rating',
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(
-                                    5,
-                                        (index) =>
-                                        GestureDetector(
-                                          onTap: () =>
-                                              setState(() =>
-                                              _currentFilters.minRating =
-                                                  (index + 1).toDouble()),
-                                          child: Container(
-                                            margin: const EdgeInsets.symmetric(
-                                                horizontal: 4),
-                                            child: Icon(
-                                              index < _currentFilters.minRating
-                                                  ? Icons.star_rounded
-                                                  : Icons.star_border_rounded,
-                                              color: AppColors.lightBlue,
-                                              size: 36,
-                                            ),
-                                          ),
-                                        ),
-                                  ),
-                                ),
-                              ),
-                              _buildFilterSection(
-                                title: 'Fee Range (PKR)',
-                                child: Column(
-                                  children: [
-                                    RangeSlider(
-                                      values: RangeValues(
-                                          _currentFilters.minFee,
-                                          _currentFilters.maxFee),
-                                      min: 0,
-                                      max: 300000,
-                                      divisions: 6,
-                                      activeColor: AppColors.lightBlue,
-                                      inactiveColor: Colors.grey[300],
-                                      labels: RangeLabels(
-                                        '${(_currentFilters.minFee / 1000)
-                                            .toStringAsFixed(0)}k',
-                                        '${(_currentFilters.maxFee / 1000)
-                                            .toStringAsFixed(0)}k',
-                                      ),
-                                      onChanged: (values) =>
-                                          setState(() {
-                                            _currentFilters.minFee =
-                                                values.start;
-                                            _currentFilters.maxFee = values.end;
-                                          }),
-                                    ),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment
-                                          .spaceBetween,
-                                      children: [
-                                        Text('0 PKR', style: TextStyle(
-                                            color: Colors.black)),
-                                        Text('300,000 PKR', style: TextStyle(
-                                            color: Colors.black)),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              _buildFilterSection(
-                                title: 'Duration (Semesters)',
-                                child: Column(
-                                  children: [
-                                    Slider(
-                                      value: _currentFilters.minDuration
-                                          .toDouble(),
-                                      min: 1,
-                                      max: 10,
-                                      divisions: 9,
-                                      label: '${_currentFilters
-                                          .minDuration} Sem',
-                                      activeColor: AppColors.lightBlue,
-                                      inactiveColor: Colors.grey[300],
-                                      onChanged: (value) =>
-                                          setState(
-                                                  () =>
-                                              _currentFilters.minDuration =
-                                                  value.toInt()),
-                                    ),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment
-                                            .spaceBetween,
-                                        children: [
-                                          Text('1 Sem', style: TextStyle(
-                                              color: Colors.black)),
-                                          Text('10 Sem', style: TextStyle(
-                                              color: Colors.black)),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              _buildFilterSection(
-                                title: 'Scholarship',
-                                child: SwitchListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  title: Text('Available Scholarship',
-                                      style: TextStyle(color: Colors.black)),
-                                  value: _currentFilters.hasScholarship,
-                                  onChanged: (value) =>
-                                      setState(() =>
-                                      _currentFilters.hasScholarship = value),
-                                  activeColor: AppColors.lightBlue,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.grey[200],
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                ),
-                                onPressed: () =>
-                                    setState(() =>
-                                    _currentFilters = FilterOptions()),
-                                child: const Text('Reset Filters'),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.lightBlue,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                ),
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Apply Filters'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-          ),
-    );
-  }
-
-  Widget _buildFilterSection({required String title, required Widget child}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5)),
-          const SizedBox(height: 16),
-          child,
-        ],
-      ),
-    );
+    showFilters(context, _currentFilters, (newFilters) {
+      setState(() {
+        _currentFilters = newFilters;
+      });
+      _loadPrograms(); // Reload programs with new filters
+    });
   }
 
   Widget _buildHistoryChip(String text) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.myGray,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: AppColors.myBlack,
-          fontSize: 13,
-          fontFamily: 'Product Sans',
+    return GestureDetector(
+      onTap: () {
+        _searchController.text = text;
+        _performSearch();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.myGray,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              text,
+              style: TextStyle(
+                color: AppColors.myBlack,
+                fontSize: 13,
+                fontFamily: 'Product Sans',
+              ),
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: () async {
+                await SearchHistoryService.removeFromHistory(text);
+                _loadSearchHistory();
+              },
+              child: Icon(
+                Icons.close,
+                size: 16,
+                color: AppColors.myBlack,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // University card with compare toggle.
-  Widget _buildUniversityCard(
-      BuildContext context, { // Added context parameter
-        required University university,
+  // Program card with compare toggle
+  Widget _buildProgramCard(
+      BuildContext context, {
+        required Program program,
         required bool isSelected,
         required VoidCallback onCompareToggle,
       }) {
     return InkWell(
       onTap: () {
-        // Navigate to the dedicated UniversityInformation screen.
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => UniversityInformation(),
+            builder: (context) => UniversityInformation(program: program),
           ),
         );
       },
@@ -668,20 +709,36 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top row with university name and icons.
+              // Top row with university name and icons
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      university.name,
-                      style: TextStyle(
-                        fontFamily: 'Product Sans',
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.myBlack,
-                      ),
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          program.universityTitle,
+                          style: TextStyle(
+                            fontFamily: 'Product Sans',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.myBlack,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          program.programTitle,
+                          style: TextStyle(
+                            fontFamily: 'Product Sans',
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.lightBlue,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
                   GestureDetector(
@@ -696,7 +753,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                       child: IconButton(
                         padding: EdgeInsets.zero,
                         onPressed: () {
-                          // Save functionality placeholder.
+                          // Save functionality placeholder
                         },
                         icon: SvgPicture.asset(
                           'assets/images/save.svg',
@@ -720,57 +777,65 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                   ),
                 ],
               ),
-              // University details.
+              const SizedBox(height: 12),
+              // Program details - Updated layout
               Row(
                 children: [
-                  _buildLabelValue('Degree', university.degree),
-                  const SizedBox(width: 116),
-                  _buildLabelValue('Duration', '${university.duration} Semesters'),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _buildLabelValue('Beginning', university.beginning),
-                  const SizedBox(width: 60),
-                  _buildLabelValue('Tuition Fee Per Sem', '${university.feePerSem} PKR'),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Row(children: _buildStarIconsBlack(university.rating)),
-                  const SizedBox(width: 75),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        university.location,
-                        style: TextStyle(
-                          fontFamily: 'Product Sans',
-                          fontSize: 14,
-                          fontWeight: FontWeight.normal,
-                          color: AppColors.myBlack,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      SvgPicture.asset(
-                        'assets/images/location.svg',
-                        width: 16,
-                        color: AppColors.myBlack,
-                      ),
-                    ],
+                  Expanded(
+                    child: _buildLabelValue('Duration', program.durationInSemesters),
+                  ),
+                  Expanded(
+                    child: _buildLabelValue('Total Fee', program.formattedTotalFee),
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildLabelValue('Credit Hours', program.creditHours),
+                  ),
+                  Expanded(
+                    child: _buildLabelValue('Location', program.location),
+                  ),
+                ],
+              ),
+              if (program.hasScholarship) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.school,
+                        color: Colors.green[700],
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Scholarship Available',
+                        style: TextStyle(
+                          color: Colors.green[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Product Sans',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       ),
     );
   }
-
 
   Widget _buildLabelValue(String label, String value) {
     return Column(
@@ -794,41 +859,26 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
             color: AppColors.myBlack,
             fontSize: 14,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
   }
 
-  List<Widget> _buildStarIconsBlack(double rating) {
-    final stars = <Widget>[];
-    final fullStars = rating.floor();
-    final hasHalfStar = (rating - fullStars) >= 0.5;
-    for (int i = 0; i < fullStars; i++) {
-      stars.add(const Icon(Icons.star, color: Colors.black, size: 18));
-    }
-    if (hasHalfStar) {
-      stars.add(const Icon(Icons.star_half, color: Colors.black, size: 18));
-    }
-    while (stars.length < 5) {
-      stars.add(const Icon(Icons.star_border, color: Colors.black, size: 18));
-    }
-    return stars;
-  }
-
-  Widget _buildComparisonTable(List<University> selectedUniversities) {
+  Widget _buildComparisonTable(List<Program> selectedPrograms) {
     final List<String> attributes = [
-      'Degree',
-      'Rating',
+      'Program Title',
+      'University',
       'Duration',
-      'Beginning',
-      'Tuition Fee Per Sem',
-      'Location'
+      'Total Fee',
+      'Credit Hours',
+      'Location',
     ];
 
     // Calculate total width needed for all columns
     final double criteriaWidth = 150;
-    final double universityWidth = 200;
-    final double totalWidth = criteriaWidth + (selectedUniversities.length * universityWidth);
+    final double programWidth = 200;
+    final double totalWidth = criteriaWidth + (selectedPrograms.length * programWidth);
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -846,7 +896,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
               child: Row(
                 children: [
                   _buildHeaderCell('Criteria', criteriaWidth),
-                  ...selectedUniversities.map((uni) => _buildHeaderCell(uni.name, universityWidth)),
+                  ...selectedPrograms.map((program) => _buildHeaderCell(program.universityTitle, programWidth)),
                 ],
               ),
             ),
@@ -865,7 +915,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                   child: Row(
                     children: [
                       _buildAttributeCell(attr, criteriaWidth),
-                      ...selectedUniversities.map((uni) => _buildValueCell(_getAttributeValue(uni, attr), universityWidth)),
+                      ...selectedPrograms.map((program) => _buildValueCell(_getAttributeValue(program, attr), programWidth)),
                     ],
                   ),
                 );
@@ -923,93 +973,80 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     );
   }
 
-  String _getAttributeValue(University uni, String attribute) {
+  String _getAttributeValue(Program program, String attribute) {
     switch (attribute) {
-      case 'Degree':
-        return uni.degree;
-      case 'Rating':
-        return '${uni.rating}/5.0';
+      case 'Program Title':
+        return program.programTitle;
+      case 'University':
+        return program.universityTitle;
       case 'Duration':
-        return '${uni.duration} Sem';
-      case 'Beginning':
-        return uni.beginning;
-      case 'Tuition Fee Per Sem':
-        return '${uni.feePerSem} PKR';
+        return program.durationInSemesters;
+      case 'Total Fee':
+        return program.formattedTotalFee;
+      case 'Credit Hours':
+        return program.creditHours;
       case 'Location':
-        return uni.location;
+        return program.location;
       default:
         return '';
     }
   }
 
-  void _showComparisonPopup(List<University> selectedUniversities) {
+  void _showComparisonPopup(List<Program> selectedPrograms) {
     final double tableHeight = 60 + (6 * 50).toDouble(); // 6 attributes
 
     showDialog(
       context: context,
-      builder: (context) =>
-          Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: EdgeInsets.zero,
-            child: Container(
-              constraints: BoxConstraints(
-                maxHeight: tableHeight + 100, // Add space for header
-                maxWidth: MediaQuery
-                    .of(context)
-                    .size
-                    .width,
-              ),
-              margin: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.myBlack,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'University Comparison',
-                          style: TextStyle(
-                            color: AppColors.myWhite,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.close, color: AppColors.myWhite),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return Container(
-                          width: constraints.maxWidth,
-                          child: _buildComparisonTable(selectedUniversities),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.zero,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: tableHeight + 100, // Add space for header
+            maxWidth: MediaQuery.of(context).size.width,
           ),
+          margin: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.myBlack,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Program Comparison',
+                      style: TextStyle(
+                        color: AppColors.myWhite,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: AppColors.myWhite),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Container(
+                      width: constraints.maxWidth,
+                      child: _buildComparisonTable(selectedPrograms),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
-}
-class FilterOptions {
-  String? location;
-  List<String> degreeTypes = [];
-  double minFee = 0;
-  double maxFee = 300000;
-  int minDuration = 1;
-  double minRating = 0;
-  bool hasScholarship = false;
 }
