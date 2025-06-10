@@ -220,39 +220,39 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       value: value,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(
-            color: AppColors.myWhite,
+        labelStyle: TextStyle(
+            color: AppColors.textSecondary(context),
             fontSize: 14,
             fontWeight: FontWeight.normal),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide:
-          const BorderSide(color: AppColors.myWhite, width: 1.5),
+          BorderSide(color: AppColors.borderColor(context), width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide:
-          const BorderSide(color: AppColors.myWhite, width: 1.5),
+          BorderSide(color: AppColors.borderColor(context), width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide:
-          const BorderSide(color: AppColors.myWhite, width: 2),
+          BorderSide(color: AppColors.lightBlue, width: 2),
         ),
         filled: true,
-        fillColor: AppColors.lightBlack,
+        fillColor: AppColors.surfaceColor(context),
         contentPadding:
         EdgeInsets.symmetric(horizontal: 16, vertical: verticalPadding),
       ),
-      icon: const Icon(Icons.arrow_drop_down, color: AppColors.myWhite),
-      dropdownColor: AppColors.lightBlack,
-      style: const TextStyle(
-          color: AppColors.myWhite, fontSize: 14),
+      icon: Icon(Icons.arrow_drop_down, color: AppColors.textPrimary(context)),
+      dropdownColor: AppColors.surfaceColor(context),
+      style: TextStyle(
+          color: AppColors.textPrimary(context), fontSize: 14),
       items: items
           .map((item) => DropdownMenuItem(
         value: item,
         child: Text(item,
-            style: const TextStyle(color: AppColors.myWhite)),
+            style: TextStyle(color: AppColors.textPrimary(context))),
       ))
           .toList(),
       onChanged: onChanged,
@@ -273,32 +273,32 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       cursorColor: AppColors.lightBlue,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(
-            color: AppColors.myWhite,
+        labelStyle: TextStyle(
+            color: AppColors.textSecondary(context),
             fontSize: 14,
             fontWeight: FontWeight.normal),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide:
-          const BorderSide(color: AppColors.myWhite, width: 1.5),
+          BorderSide(color: AppColors.borderColor(context), width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide:
-          const BorderSide(color: AppColors.myWhite, width: 1.5),
+          BorderSide(color: AppColors.borderColor(context), width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide:
-          const BorderSide(color: AppColors.myWhite, width: 2),
+          BorderSide(color: AppColors.lightBlue, width: 2),
         ),
         filled: true,
-        fillColor: AppColors.lightBlack,
+        fillColor: AppColors.surfaceColor(context),
         contentPadding:
         const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
-      style: const TextStyle(
-          color: AppColors.darkGray,
+      style: TextStyle(
+          color: AppColors.textPrimary(context),
           fontSize: 14,
           fontWeight: FontWeight.normal),
       onChanged: onChanged,
@@ -312,7 +312,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       children: [
         Text(label,
             style: TextStyle(
-                color: isActive ? AppColors.darkBlue : AppColors.myGray,
+                color: isActive ? AppColors.lightBlue : AppColors.textSecondary(context),
                 fontSize: 16,
                 fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
@@ -320,7 +320,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           width: 100,
           height: 10,
           decoration: BoxDecoration(
-            color: AppColors.lightBlack,
+            color: AppColors.surfaceColor(context),
             borderRadius: BorderRadius.circular(5),
           ),
           child: FractionallySizedBox(
@@ -328,7 +328,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             widthFactor: progress,
             child: Container(
               decoration: BoxDecoration(
-                color: isActive ? AppColors.darkBlue : AppColors.myGray,
+                color: isActive ? AppColors.lightBlue : AppColors.textSecondary(context),
                 borderRadius: BorderRadius.circular(5),
               ),
             ),
@@ -345,8 +345,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(question,
-            style: const TextStyle(
-                color: AppColors.myWhite,
+            style: TextStyle(
+                color: AppColors.textPrimary(context),
                 fontSize: 16,
                 fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
@@ -357,7 +357,13 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               label: Text(options[index],
                   style: const TextStyle(fontSize: 12)),
               selected: currentValue == index,
-              selectedColor: AppColors.darkBlue,
+              selectedColor: AppColors.lightBlue,
+              backgroundColor: AppColors.surfaceColor(context),
+              labelStyle: TextStyle(
+                color: currentValue == index
+                    ? AppColors.myWhite
+                    : AppColors.textPrimary(context),
+              ),
               onSelected: (selected) {
                 onChanged(selected ? index : null);
               },
@@ -598,8 +604,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 MaterialStateProperty.resolveWith<Color>(
                       (Set<MaterialState> states) {
                     if (states.contains(MaterialState.disabled))
-                      return Colors.grey[600]!;
-                    return AppColors.darkBlue; // Enabled color.
+                      return AppColors.textSecondary(context);
+                    return AppColors.lightBlue; // Enabled color.
                   },
                 ),
                 padding: MaterialStateProperty.all<EdgeInsets>(
@@ -625,7 +631,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 style: TextStyle(
                   color: _isFormComplete
                       ? AppColors.myWhite
-                      : Colors.grey[300],
+                      : AppColors.textSecondary(context),
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -641,7 +647,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
+      backgroundColor: AppColors.backgroundColor(context),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Stack(
@@ -652,7 +658,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               left: 10,
               child: IconButton(
                 icon: SvgPicture.asset("assets/images/back.svg",
-                    color: AppColors.myWhite, height: 30),
+                    color: AppColors.textPrimary(context), height: 30),
                 onPressed: () {
                   Navigator.pop(context);
                 },
@@ -691,8 +697,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(
                   horizontal: 16, vertical: 42),
-              decoration: const BoxDecoration(
-                color: AppColors.darkBlack,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceColor(context),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),

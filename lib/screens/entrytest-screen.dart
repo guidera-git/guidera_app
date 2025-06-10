@@ -29,55 +29,6 @@ class SubjectCard {
   });
 }
 
-/// Consolidated list of subjects with backend codes
-const subjects = <SubjectCard>[
-  SubjectCard(
-    title: 'Chemistry',
-    iconPath: 'assets/images/chemistry.svg',
-    gradient: LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
-    titleColor: AppColors.darkBlue,
-    circleColor: AppColors.darkBlue,
-    iconColor: AppColors.myWhite,
-    code: 'CHEMISTRY',
-  ),
-  SubjectCard(
-    title: 'Biology',
-    iconPath: 'assets/images/biology.svg',
-    gradient: LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
-    titleColor: AppColors.myWhite,
-    circleColor: AppColors.myWhite,
-    iconColor: AppColors.darkBlue,
-    code: 'BIOLOGY',
-  ),
-  SubjectCard(
-    title: 'Physics',
-    iconPath: 'assets/images/physics.svg',
-    gradient: LinearGradient(colors: [AppColors.darkBlack, AppColors.darkBlack]),
-    titleColor: AppColors.myWhite,
-    circleColor: AppColors.myWhite,
-    iconColor: AppColors.myBlack,
-    code: 'PHY',
-  ),
-  SubjectCard(
-    title: 'English',
-    iconPath: 'assets/images/english.svg',
-    gradient: LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
-    titleColor: AppColors.darkBlue,
-    circleColor: AppColors.darkBlue,
-    iconColor: AppColors.myWhite,
-    code: 'ENGLISH',
-  ),
-  SubjectCard(
-    title: 'Analytical Reasoning',
-    iconPath: 'assets/images/test.svg',
-    gradient: LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
-    titleColor: AppColors.myWhite,
-    circleColor: AppColors.myWhite,
-    iconColor: AppColors.darkBlue,
-    code: 'ANALYTICAL_REASONING',
-  ),
-];
-
 class EntryTestScreen extends StatefulWidget {
   const EntryTestScreen({Key? key}) : super(key: key);
 
@@ -87,6 +38,109 @@ class EntryTestScreen extends StatefulWidget {
 
 class _EntryTestScreenState extends State<EntryTestScreen> {
   final ApiService _apiService = ApiService();
+
+  /// Get subjects with theme-appropriate colors
+  List<SubjectCard> _getSubjects(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    if (isDarkMode) {
+      return [
+        SubjectCard(
+          title: 'Chemistry',
+          iconPath: 'assets/images/chemistry.svg',
+          gradient: LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
+          titleColor: AppColors.darkBlue,
+          circleColor: AppColors.darkBlue,
+          iconColor: AppColors.myWhite,
+          code: 'CHEMISTRY',
+        ),
+        SubjectCard(
+          title: 'Biology',
+          iconPath: 'assets/images/biology.svg',
+          gradient: LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
+          titleColor: AppColors.myWhite,
+          circleColor: AppColors.myWhite,
+          iconColor: AppColors.darkBlue,
+          code: 'BIOLOGY',
+        ),
+        SubjectCard(
+          title: 'Physics',
+          iconPath: 'assets/images/physics.svg',
+          gradient: LinearGradient(colors: [AppColors.darkBlack, AppColors.darkBlack]),
+          titleColor: AppColors.myWhite,
+          circleColor: AppColors.myWhite,
+          iconColor: AppColors.myBlack,
+          code: 'PHY',
+        ),
+        SubjectCard(
+          title: 'English',
+          iconPath: 'assets/images/english.svg',
+          gradient: LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
+          titleColor: AppColors.darkBlue,
+          circleColor: AppColors.darkBlue,
+          iconColor: AppColors.myWhite,
+          code: 'ENGLISH',
+        ),
+        SubjectCard(
+          title: 'Analytical Reasoning',
+          iconPath: 'assets/images/test.svg',
+          gradient: LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
+          titleColor: AppColors.myWhite,
+          circleColor: AppColors.myWhite,
+          iconColor: AppColors.darkBlue,
+          code: 'ANALYTICAL_REASONING',
+        ),
+      ];
+    } else {
+      return [
+        SubjectCard(
+          title: 'Chemistry',
+          iconPath: 'assets/images/chemistry.svg',
+          gradient: LinearGradient(colors: [AppColors.lightBlue.withOpacity(0.1), AppColors.lightBlue.withOpacity(0.2)]),
+          titleColor: AppColors.lightSurface,
+          circleColor: AppColors.lightBlue,
+          iconColor: AppColors.myWhite,
+          code: 'CHEMISTRY',
+        ),
+        SubjectCard(
+          title: 'Biology',
+          iconPath: 'assets/images/biology.svg',
+          gradient: LinearGradient(colors: [AppColors.darkBlue, AppColors.lightBlue]),
+          titleColor: AppColors.myWhite,
+          circleColor: AppColors.lightSurface,
+          iconColor: AppColors.lightBlue,
+          code: 'BIOLOGY',
+        ),
+        SubjectCard(
+          title: 'Physics',
+          iconPath: 'assets/images/physics.svg',
+          gradient: LinearGradient(colors: [AppColors.lightTextPrimary, AppColors.lightTextSecondary]),
+          titleColor: AppColors.myWhite,
+          circleColor: AppColors.lightSurface,
+          iconColor: AppColors.lightTextPrimary,
+          code: 'PHY',
+        ),
+        SubjectCard(
+          title: 'English',
+          iconPath: 'assets/images/english.svg',
+          gradient: LinearGradient(colors: [AppColors.lightSurface, AppColors.lightBackground]),
+          titleColor: AppColors.lightBlue,
+          circleColor: AppColors.lightBlue,
+          iconColor: AppColors.myWhite,
+          code: 'ENGLISH',
+        ),
+        SubjectCard(
+          title: 'Analytical Reasoning',
+          iconPath: 'assets/images/test.svg',
+          gradient: LinearGradient(colors: [AppColors.lightSurface, AppColors.lightBackground]),
+          titleColor: AppColors.lightBlue,
+          circleColor: AppColors.lightBlue,
+          iconColor: AppColors.myWhite,
+          code: 'ANALYTICAL_REASONING',
+        ),
+      ];
+    }
+  }
 
   Future<void> _startTest(SubjectCard subject) async {
     // Show loading dialog
@@ -133,8 +187,10 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final subjects = _getSubjects(context);
+
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
+      backgroundColor: AppColors.backgroundColor(context),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Stack(
@@ -146,7 +202,7 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
               child: IconButton(
                 icon: SvgPicture.asset(
                   'assets/images/back.svg',
-                  color: AppColors.myWhite,
+                  color: AppColors.textPrimary(context),
                   height: 30,
                 ),
                 onPressed: () => Navigator.of(context).maybePop(),
@@ -204,7 +260,7 @@ class SubjectCardWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(16.0),
           boxShadow: [
             BoxShadow(
-              color: AppColors.myBlack.withOpacity(0.1),
+              color: AppColors.shadowColor(context),
               blurRadius: 8,
               spreadRadius: 2,
             ),
@@ -247,7 +303,7 @@ class SubjectCardWidget extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.myBlack.withOpacity(0.2),
+                        color: AppColors.shadowColor(context),
                         blurRadius: 4,
                         spreadRadius: 1,
                       ),
@@ -288,14 +344,22 @@ class WelcomeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.all(16.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: isDarkMode
+            ? const LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [AppColors.myWhite, AppColors.myGray],
+        )
+            : LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [AppColors.lightSurface, AppColors.lightBackground],
         ),
         borderRadius: BorderRadius.circular(16.0),
       ),
@@ -317,7 +381,7 @@ class WelcomeCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18.0,
                     fontWeight: FontWeight.normal,
-                    color: AppColors.myBlack,
+                    color: isDarkMode ? AppColors.myBlack : AppColors.lightTextPrimary,
                   ),
                 ),
               ],

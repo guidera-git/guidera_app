@@ -87,14 +87,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color backgroundColor =
-    isDarkMode ? AppColors.myBlack : AppColors.myWhite;
-    final Color guideraTextColor =
-    isDarkMode ? AppColors.myWhite : AppColors.myBlack;
-    final Color hatColor =
-    isDarkMode ? AppColors.lightBlue : AppColors.myBlack;
-    final Color lineColor =
-    isDarkMode ? AppColors.myWhite : AppColors.myBlack;
+    final Color backgroundColor = AppColors.backgroundColor(context);
+    final Color guideraTextColor = AppColors.textPrimary(context);
+    final Color hatColor = isDarkMode ? AppColors.lightBlue : AppColors.lightTextPrimary;
+    final Color lineColor = AppColors.textPrimary(context);
 
     return Scaffold(
       backgroundColor: backgroundColor,

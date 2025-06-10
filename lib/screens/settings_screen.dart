@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:provider/provider.dart';
 import 'package:guidera_app/screens/privacy_policy.dart';
 import 'package:guidera_app/screens/login-signup.dart';
 import 'package:guidera_app/theme/app_colors.dart';
+import 'package:guidera_app/providers/theme_provider.dart';
 import '../Widgets/drawer.dart';
-
 
 /// A settings screen with inline controls for General settings,
 /// and separate cards for Privacy, Support, and Account.
@@ -19,12 +20,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Inline setting values.
   bool _notificationsEnabled = true;
   final List<String> _preferences = ['Light', 'Dark', 'System'];
-  String _selectedPreference = 'Dark';
 
   /// Helper method to build a settings card with a title and options.
   Widget _buildSettingsCard({required String title, required List<Widget> options}) {
     return Card(
-      color: AppColors.lightBlack,
+      color: AppColors.surfaceColor(context),
       margin: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -34,10 +34,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.myWhite,
+                color: AppColors.textPrimary(context),
               ),
             ),
             const SizedBox(height: 8),
@@ -51,25 +51,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
+      backgroundColor: AppColors.backgroundColor(context),
       // Add the common drawer with selectedIndex set to 3 (Settings)
       drawer: const GuideraDrawer(selectedIndex: 3),
       appBar: AppBar(
-        backgroundColor: AppColors.myBlack,
+        backgroundColor: AppColors.backgroundColor(context),
         elevation: 0,
         // Menu icon to open the drawer.
         leading: Builder(
           builder: (context) => IconButton(
             icon: SvgPicture.asset(
               "assets/images/menu.svg",
-              color: AppColors.myWhite,
+              color: AppColors.textPrimary(context),
             ),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        title: const Text(
+        title: Text(
           "Settings",
-          style: TextStyle(color: AppColors.myWhite),
+          style: TextStyle(color: AppColors.textPrimary(context)),
         ),
       ),
       body: SingleChildScrollView(
@@ -83,10 +83,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Notification Settings inline control.
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.notifications, color: AppColors.myWhite),
-                  title: const Text(
+                  leading: Icon(
+                      Icons.notifications,
+                      color: AppColors.textPrimary(context)
+                  ),
+                  title: Text(
                     "Notification Settings",
-                    style: TextStyle(color: AppColors.myWhite, fontSize: 17),
+                    style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 17
+                    ),
                   ),
                   trailing: Switch(
                     value: _notificationsEnabled,
@@ -98,38 +104,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ),
-                const Divider(color: AppColors.myGray),
-                // Preferences inline control.
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.tune, color: AppColors.myWhite),
-                  title: const Text(
-                    "Theme",
-                    style: TextStyle(color: AppColors.myWhite),
-                  ),
-                  trailing: DropdownButton<String>(
-                    value: _selectedPreference,
-                    dropdownColor: AppColors.lightBlack,
-                    style: const TextStyle(color: AppColors.myWhite),
-                    underline: Container(),
-                    icon: const Icon(Icons.arrow_drop_down, color: AppColors.myWhite),
-                    items: _preferences.map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(
-                          value,
-                          style: const TextStyle(color: AppColors.myWhite),
+                Divider(color: AppColors.borderColor(context)),
+                // Theme selection inline control.
+                Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, child) {
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                          Icons.tune,
+                          color: AppColors.textPrimary(context)
+                      ),
+                      title: Text(
+                        "Theme",
+                        style: TextStyle(color: AppColors.textPrimary(context)),
+                      ),
+                      trailing: DropdownButton<String>(
+                        value: themeProvider.themePreference,
+                        dropdownColor: AppColors.surfaceColor(context),
+                        style: TextStyle(color: AppColors.textPrimary(context)),
+                        underline: Container(),
+                        icon: Icon(
+                            Icons.arrow_drop_down,
+                            color: AppColors.textPrimary(context)
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          _selectedPreference = newValue;
-                        });
-                      }
-                    },
-                  ),
+                        items: _preferences.map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(
+                              value,
+                              style: TextStyle(color: AppColors.textPrimary(context)),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            themeProvider.setThemePreference(newValue);
+                          }
+                        },
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -139,12 +153,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               options: [
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.lock, color: AppColors.myWhite),
-                  title: const Text(
-                    "Privacy & Policies",
-                    style: TextStyle(color: AppColors.myWhite),
+                  leading: Icon(
+                      Icons.lock,
+                      color: AppColors.textPrimary(context)
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios, color: AppColors.myWhite, size: 16),
+                  title: Text(
+                    "Privacy & Policies",
+                    style: TextStyle(color: AppColors.textPrimary(context)),
+                  ),
+                  trailing: Icon(
+                      Icons.arrow_forward_ios,
+                      color: AppColors.textPrimary(context),
+                      size: 16
+                  ),
                   onTap: () {
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(builder: (context) => const PrivacyScreen()),
@@ -159,12 +180,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               options: [
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.help_outline, color: AppColors.myWhite),
-                  title: const Text(
-                    "Help & Support",
-                    style: TextStyle(color: AppColors.myWhite),
+                  leading: Icon(
+                      Icons.help_outline,
+                      color: AppColors.textPrimary(context)
                   ),
-                  trailing: const Icon(Icons.arrow_forward_ios, color: AppColors.myWhite, size: 16),
+                  title: Text(
+                    "Help & Support",
+                    style: TextStyle(color: AppColors.textPrimary(context)),
+                  ),
+                  trailing: Icon(
+                      Icons.arrow_forward_ios,
+                      color: AppColors.textPrimary(context),
+                      size: 16
+                  ),
                   onTap: () {
                     // TODO: Navigate to Help & Support.
                   },
@@ -177,10 +205,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               options: [
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.logout, color: AppColors.myWhite),
-                  title: const Text(
+                  leading: Icon(
+                      Icons.logout,
+                      color: AppColors.textPrimary(context)
+                  ),
+                  title: Text(
                     "Logout",
-                    style: TextStyle(color: AppColors.myWhite),
+                    style: TextStyle(color: AppColors.textPrimary(context)),
                   ),
                   onTap: () {
                     Navigator.of(context).pushReplacement(

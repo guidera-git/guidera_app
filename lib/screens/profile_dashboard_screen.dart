@@ -123,21 +123,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void _showProfileImageOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.lightBlack,
+      backgroundColor: AppColors.surfaceColor(context),
       builder: (context) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
-            leading: const Icon(Icons.visibility, color: AppColors.myWhite),
-            title: const Text('View', style: TextStyle(color: AppColors.myWhite)),
+            leading: Icon(Icons.visibility, color: AppColors.textPrimary(context)),
+            title: Text('View', style: TextStyle(color: AppColors.textPrimary(context))),
             onTap: () {
               Navigator.pop(context);
               _showFullScreenImage();
             },
           ),
           ListTile(
-            leading: const Icon(Icons.edit, color: AppColors.myWhite),
-            title: const Text('Edit', style: TextStyle(color: AppColors.myWhite)),
+            leading: Icon(Icons.edit, color: AppColors.textPrimary(context)),
+            title: Text('Edit', style: TextStyle(color: AppColors.textPrimary(context))),
             onTap: () {
               Navigator.pop(context);
               _pickProfileImage();
@@ -224,7 +224,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         return false;
       },
       child: Scaffold(
-        backgroundColor: AppColors.myBlack,
+        backgroundColor: AppColors.backgroundColor(context),
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(120),
           child: Stack(
@@ -236,7 +236,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 child: IconButton(
                   icon: SvgPicture.asset(
                     'assets/images/back.svg',
-                    color: AppColors.myWhite,
+                    color: AppColors.textPrimary(context),
                     height: 30,
                   ),
                   onPressed: () => Navigator.of(context).pushReplacement(
@@ -248,7 +248,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
         body: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(child: CircularProgressIndicator(color: AppColors.lightBlue))
             : Column(
           children: [
             Expanded(
@@ -260,8 +260,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     const SizedBox(height: 60),
                     Text(
                       fullName ?? 'No Name',
-                      style: const TextStyle(
-                        color: AppColors.myWhite,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
@@ -269,8 +269,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     const SizedBox(height: 5),
                     Text(
                       email,
-                      style: const TextStyle(
-                        color: AppColors.myGray,
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
                         fontSize: 16,
                       ),
                     ),
@@ -313,7 +313,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           height: 150,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: AppColors.darkBlue,
+            color: AppColors.lightBlue,
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(30),
               bottomRight: Radius.circular(30),
@@ -338,7 +338,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 height: 100,
                 child: CircleAvatar(
                   radius: 50,
-                  backgroundColor: AppColors.lightBlack,
+                  backgroundColor: AppColors.surfaceColor(context),
                   backgroundImage: profile,
                 ),
               ),
@@ -356,7 +356,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         children: [
           _buildProfileDetailItem(
               icon: Icons.person, title: 'Gender', value: _gender ?? 'Select', editable: true, onTap: _selectGender),
-          const Divider(color: AppColors.lightBlack, thickness: 1),
+          Divider(color: AppColors.borderColor(context), thickness: 1),
           _buildProfileDetailItem(
             icon: Icons.calendar_today,
             title: 'Birthdate',
@@ -364,7 +364,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             editable: true,
             onTap: _selectBirthdate,
           ),
-          const Divider(color: AppColors.lightBlack, thickness: 1),
+          Divider(color: AppColors.borderColor(context), thickness: 1),
         ],
       ),
     );
@@ -376,11 +376,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('About Me', style: TextStyle(color: AppColors.myWhite, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text('About Me', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           GestureDetector(
             onTap: _editAboutMe,
-            child: Text(_aboutMe ?? 'Tell us about yourself', style: const TextStyle(color: AppColors.myGray, fontSize: 16)),
+            child: Text(_aboutMe ?? 'Tell us about yourself', style: TextStyle(color: AppColors.textSecondary(context), fontSize: 16)),
           ),
         ],
       ),
@@ -395,7 +395,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         icon: const Icon(Icons.logout, color: AppColors.myWhite),
         label: const Text('Log Out', style: TextStyle(color: AppColors.myWhite, fontSize: 18, fontWeight: FontWeight.bold)),
         style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.darkBlue,
+            backgroundColor: AppColors.lightBlue,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
         onPressed: _logout,
       ),
@@ -407,14 +407,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Select Gender'),
+        backgroundColor: AppColors.surfaceColor(context),
+        title: Text('Select Gender', style: TextStyle(color: AppColors.textPrimary(context))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: ['Male', 'Female'].map((g) {
             return RadioListTile<String>(
-              title: Text(g),
+              title: Text(g, style: TextStyle(color: AppColors.textPrimary(context))),
               value: g,
               groupValue: selected,
+              activeColor: AppColors.lightBlue,
               onChanged: (val) async {
                 if (val != null) {
                   setState(() => _gender = val);
@@ -435,6 +437,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       initialDate: _birthdate ?? DateTime.now(),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppColors.lightBlue,
+              surface: AppColors.surfaceColor(context),
+              onSurface: AppColors.textPrimary(context),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && picked != _birthdate) {
       setState(() => _birthdate = picked);
@@ -447,24 +461,36 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('About Me'),
+        backgroundColor: AppColors.surfaceColor(context),
+        title: Text('About Me', style: TextStyle(color: AppColors.textPrimary(context))),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(labelText: 'About Me'),
+          style: TextStyle(color: AppColors.textPrimary(context)),
+          decoration: InputDecoration(
+            labelText: 'About Me',
+            labelStyle: TextStyle(color: AppColors.textSecondary(context)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.borderColor(context)),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.lightBlue),
+            ),
+          ),
           maxLines: 4,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.lightBlue),
             onPressed: () async {
               setState(() => _aboutMe = controller.text);
               await _updateField({'aboutme': controller.text});
               Navigator.pop(context);
             },
-            child: const Text('Save'),
+            child: const Text('Save', style: TextStyle(color: AppColors.myWhite)),
           ),
         ],
       ),
@@ -481,17 +507,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
-          children: [
-          Icon(icon, color: AppColors.darkBlue, size: 24),
-      const SizedBox(width: 10),
-      Text('$title:', style: const TextStyle(color: AppColors.myWhite, fontSize: 16, fontWeight: FontWeight.w600)),
-      const SizedBox(width: 10),
-      Expanded(
-        child: GestureDetector(
-          onTap: editable ? onTap : null,
-          child: Text(value, style: const TextStyle(color: AppColors.myGray, fontSize: 16)),
-        ),
-      ),],
+        children: [
+          Icon(icon, color: AppColors.lightBlue, size: 24),
+          const SizedBox(width: 10),
+          Text('$title:', style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: GestureDetector(
+              onTap: editable ? onTap : null,
+              child: Text(value, style: TextStyle(color: AppColors.textSecondary(context), fontSize: 16)),
+            ),
+          ),],
       ),
     );
   }

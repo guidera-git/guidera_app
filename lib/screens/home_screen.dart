@@ -52,28 +52,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _DrawerItem(title: "Rate & Social", svgPath: "assets/images/share.svg"),
   ];
 
-  // Colors and gradients used by the grid tiles on the Home dashboard.
-  final List<LinearGradient> _cardGradients = [
-    LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
-    LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
-    LinearGradient(colors: [AppColors.darkBlack, AppColors.darkBlack]),
-    LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
-  ];
-
-  final List<Color> _titleCardColors = [
-    AppColors.darkBlue,
-    AppColors.myWhite,
-    AppColors.myWhite,
-    AppColors.darkBlue,
-  ];
-
-  final List<Map<String, Color>> _circleColors = [
-    {'circle': AppColors.darkBlue, 'icon': AppColors.myWhite},
-    {'circle': AppColors.myWhite, 'icon': AppColors.darkBlue},
-    {'circle': AppColors.myWhite, 'icon': AppColors.myBlack},
-    {'circle': AppColors.darkBlue, 'icon': AppColors.myWhite},
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -94,7 +72,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildAvatar({double radius = 24}) {
     if (_loadingProfile) {
-      return CircleAvatar(radius: radius, child: CircularProgressIndicator(strokeWidth: 2));
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: AppColors.surfaceColor(context),
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: AppColors.primary(context),
+        ),
+      );
     }
     final photoUrl = profile?['profilephoto'] as String?;
     if (photoUrl != null && photoUrl.isNotEmpty) {
@@ -103,7 +88,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return CircleAvatar(
       radius: radius,
       backgroundColor: Colors.transparent,
-      child: SvgPicture.asset('assets/images/default_avatar.svg', width: radius * 2, height: radius * 2),
+      child: SvgPicture.asset(
+        'assets/images/default_avatar.svg',
+        width: radius * 2,
+        height: radius * 2,
+        color: AppColors.textPrimary(context),
+      ),
     );
   }
 
@@ -135,14 +125,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Color backgroundColor = isDarkMode ? AppColors.myBlack : AppColors.myWhite;
 
     // Build screens here so profile updates reflect immediately.
     final _screens = [
       HomeTab(
-        cardGradients: _cardGradients,
-        titleCardColors: _titleCardColors,
-        circleColors: _circleColors,
         profile: profile,
         loading: _loadingProfile,
       ),
@@ -167,9 +153,9 @@ class _HomeScreenState extends State<HomeScreen> {
         return true;
       },
       child: Scaffold(
-        backgroundColor: backgroundColor,
+        backgroundColor: AppColors.backgroundColor(context),
         drawer: Drawer(
-          backgroundColor: AppColors.myBlack,
+          backgroundColor: AppColors.drawerBackground(context),
           width: 260,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,17 +169,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 16),
                     Text(
                       profile?['fullname']?.split(' ').first ?? 'Guest',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.myWhite),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary(context),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       profile?['email'] ?? 'guest@gmail.com',
-                      style: const TextStyle(fontSize: 14, color: AppColors.myGray),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textSecondary(context),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Divider(color: AppColors.myGray, thickness: 1, height: 0),
+              Divider(color: AppColors.borderColor(context), thickness: 1, height: 0),
               Expanded(
                 child: ListView.builder(
                   itemCount: _drawerItems.length,
@@ -205,20 +198,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isSelected ? AppColors.myGray : Colors.transparent,
+                          color: isSelected
+                              ? AppColors.primary(context).withOpacity(0.1)
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: ListTile(
                           leading: SvgPicture.asset(
                             item.svgPath,
-                            color: isSelected ? AppColors.darkBlue : AppColors.myWhite,
+                            color: isSelected
+                                ? AppColors.primary(context)
+                                : AppColors.textPrimary(context),
                             width: 24,
                             height: 24,
                           ),
                           title: Text(
                             item.title,
                             style: TextStyle(
-                              color: isSelected ? AppColors.darkBlue : AppColors.myWhite,
+                              color: isSelected
+                                  ? AppColors.primary(context)
+                                  : AppColors.textPrimary(context),
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
@@ -243,7 +242,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   top: 75,
                   left: 10,
                   child: IconButton(
-                    icon: const Icon(Icons.menu, color: AppColors.myWhite),
+                    icon: Icon(
+                      Icons.menu,
+                      color: AppColors.textPrimary(context),
+                    ),
                     onPressed: () => Scaffold.of(context).openDrawer(),
                   ),
                 ),
@@ -265,23 +267,79 @@ class _HomeScreenState extends State<HomeScreen> {
 
 /// HomeTab remains as your dashboard for the Home screen.
 class HomeTab extends StatelessWidget {
-  final List<LinearGradient> cardGradients;
-  final List<Color> titleCardColors;
-  final List<Map<String, Color>> circleColors;
   final Map<String, dynamic>? profile;
   final bool loading;
 
   const HomeTab({
     Key? key,
-    required this.cardGradients,
-    required this.titleCardColors,
-    required this.circleColors,
     required this.profile,
     required this.loading,
   }) : super(key: key);
 
+  List<LinearGradient> _getCardGradients(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    if (isDarkMode) {
+      return [
+        LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
+        LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
+        LinearGradient(colors: [AppColors.darkBlack, AppColors.darkBlack]),
+        LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
+      ];
+    } else {
+      return [
+        LinearGradient(colors: [AppColors.lightBlue.withOpacity(0.1), AppColors.lightBlue.withOpacity(0.2)]),
+        LinearGradient(colors: [AppColors.darkBlue, AppColors.lightBlue]),
+        LinearGradient(colors: [AppColors.lightTextPrimary, AppColors.lightTextSecondary]),
+        LinearGradient(colors: [AppColors.lightSurface, AppColors.lightBackground]),
+      ];
+    }
+  }
+
+  List<Color> _getTitleCardColors(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    if (isDarkMode) {
+      return [
+        AppColors.darkBlue,
+        AppColors.myWhite,
+        AppColors.myWhite,
+        AppColors.darkBlue,
+      ];
+    } else {
+      return [
+        AppColors.lightSurface,
+        AppColors.myWhite,
+        AppColors.myWhite,
+        AppColors.lightBlue,
+      ];
+    }
+  }
+
+  List<Map<String, Color>> _getCircleColors(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    if (isDarkMode) {
+      return [
+        {'circle': AppColors.darkBlue, 'icon': AppColors.myWhite},
+        {'circle': AppColors.myWhite, 'icon': AppColors.darkBlue},
+        {'circle': AppColors.myWhite, 'icon': AppColors.myBlack},
+        {'circle': AppColors.darkBlue, 'icon': AppColors.myWhite},
+      ];
+    } else {
+      return [
+        {'circle': AppColors.lightBlue, 'icon': AppColors.myWhite},
+        {'circle': AppColors.lightSurface, 'icon': AppColors.lightBlue},
+        {'circle': AppColors.lightSurface, 'icon': AppColors.lightTextPrimary},
+        {'circle': AppColors.lightBlue, 'icon': AppColors.myWhite},
+      ];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     // Dummy deadlines data for demonstration.
     final deadlines = [
       {"event": "FAST - Entry Test", "date": "March 25, 2025"},
@@ -299,7 +357,11 @@ class HomeTab extends StatelessWidget {
     // Decide how to show the avatar
     Widget avatar;
     if (loading) {
-      avatar = const CircleAvatar(radius: 25, child: CircularProgressIndicator());
+      avatar = CircleAvatar(
+        radius: 25,
+        backgroundColor: AppColors.surfaceColor(context),
+        child: CircularProgressIndicator(color: AppColors.primary(context)),
+      );
     } else {
       final String? url = profile?['profilephoto'] as String?;
       if (url != null && url.isNotEmpty) {
@@ -312,6 +374,7 @@ class HomeTab extends StatelessWidget {
             'assets/images/default_avatar.svg',
             width: 48,
             height: 48,
+            color: AppColors.textPrimary(context),
           ),
         );
       }
@@ -332,17 +395,17 @@ class HomeTab extends StatelessWidget {
                   children: [
                     Text(
                       displayName,
-                      style: const TextStyle(
-                        color: AppColors.myWhite,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: 5),
-                    const Text(
+                    Text(
                       "Welcome to Guidera",
                       style: TextStyle(
-                        color: AppColors.myGray,
+                        color: AppColors.textSecondary(context),
                         fontSize: 16,
                       ),
                     ),
@@ -392,17 +455,7 @@ class HomeTab extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24.0),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              "Here is some additional content printed under the welcome card.",
-              style: TextStyle(
-                fontSize: 18.0,
-                fontWeight: FontWeight.w500,
-                color: AppColors.myBlack,
-              ),
-            ),
-          ),
+
         ],
       ),
     );
@@ -414,6 +467,10 @@ class HomeTab extends StatelessWidget {
       String iconPath,
       int index,
       ) {
+    final cardGradients = _getCardGradients(context);
+    final titleCardColors = _getTitleCardColors(context);
+    final circleColors = _getCircleColors(context);
+
     final gradient = cardGradients[index % cardGradients.length];
     final titleColor = titleCardColors[index % titleCardColors.length];
 
@@ -426,7 +483,7 @@ class HomeTab extends StatelessWidget {
           borderRadius: BorderRadius.circular(16.0),
           boxShadow: [
             BoxShadow(
-              color: AppColors.myBlack.withOpacity(0.1),
+              color: AppColors.shadowColor(context),
               blurRadius: 8,
               spreadRadius: 2,
             )
@@ -456,8 +513,7 @@ class HomeTab extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                    const EntryTestScreen(),
+                    builder: (context) => const EntryTestScreen(),
                   ),
                 );
                 break;
@@ -487,7 +543,7 @@ class HomeTab extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: _getContrastColor(titleColor),
+                      color: AppColors.getContrastColor(titleColor),
                     ),
                   ),
                 ),
@@ -504,7 +560,7 @@ class HomeTab extends StatelessWidget {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.myBlack.withOpacity(0.2),
+                        color: AppColors.shadowColor(context),
                         blurRadius: 4,
                         spreadRadius: 1,
                       ),
@@ -535,11 +591,6 @@ class HomeTab extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _getContrastColor(Color backgroundColor) {
-    final luminance = backgroundColor.computeLuminance();
-    return luminance > 0.5 ? AppColors.myBlack : AppColors.myWhite;
   }
 }
 
@@ -574,17 +625,32 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       height: 180,
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: isDarkMode
+            ? const LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [AppColors.myWhite, AppColors.myGray],
+        )
+            : LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [AppColors.lightSurface, AppColors.lightBackground],
         ),
         borderRadius: BorderRadius.circular(16.0),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowColor(context),
+            blurRadius: 8,
+            spreadRadius: 2,
+          ),
+        ],
       ),
       child: Stack(
         children: [
@@ -610,15 +676,15 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.darkBlue,
+                              color: AppColors.secondary(context),
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             "You last logged in on ${_formatDate(widget.lastLogin)}",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
-                              color: AppColors.myBlack,
+                              color: isDarkMode ? AppColors.myBlack : AppColors.textPrimary(context),
                             ),
                           ),
                         ],
@@ -635,7 +701,7 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.darkBlue,
+                              color: AppColors.secondary(context),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -644,9 +710,9 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                               padding: const EdgeInsets.only(bottom: 4.0),
                               child: Text(
                                 "${deadline['event']}: ${deadline['date']}",
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 16,
-                                  color: AppColors.myBlack,
+                                  color: isDarkMode ? AppColors.myBlack : AppColors.textPrimary(context),
                                 ),
                               ),
                             );
@@ -665,22 +731,22 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.darkBlue,
+                              color: AppColors.secondary(context),
                             ),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
+                          Text(
                             "Your profile is 80% complete.",
                             style: TextStyle(
                               fontSize: 16,
-                              color: AppColors.myBlack,
+                              color: isDarkMode ? AppColors.myBlack : AppColors.textPrimary(context),
                             ),
                           ),
                           const SizedBox(height: 8),
                           LinearProgressIndicator(
                             value: 0.8,
-                            backgroundColor: AppColors.myGray,
-                            valueColor: const AlwaysStoppedAnimation(AppColors.darkBlue),
+                            backgroundColor: isDarkMode ? AppColors.myGray : AppColors.lightBorder,
+                            valueColor: AlwaysStoppedAnimation(AppColors.secondary(context)),
                           ),
                         ],
                       ),
@@ -698,8 +764,8 @@ class _InfoCarouselCardState extends State<InfoCarouselCard> {
                     height: _currentPage == index ? 12 : 8,
                     decoration: BoxDecoration(
                       color: _currentPage == index
-                          ? AppColors.darkBlue
-                          : AppColors.myGray,
+                          ? AppColors.secondary(context)
+                          : (isDarkMode ? AppColors.myGray : AppColors.lightBorder),
                       shape: BoxShape.circle,
                     ),
                   );

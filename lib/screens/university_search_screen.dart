@@ -265,7 +265,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
+      backgroundColor: AppColors.backgroundColor(context),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Stack(
@@ -320,7 +320,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
 
   Widget _buildAppBar() {
     return Container(
-      color: AppColors.myBlack,
+      color: AppColors.backgroundColor(context),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
@@ -328,7 +328,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
             icon: SvgPicture.asset(
               'assets/images/back.svg',
               width: 30,
-              color: AppColors.darkGray,
+              color: AppColors.textPrimary(context),
             ),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
@@ -337,7 +337,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
             child: Container(
               height: 45,
               decoration: BoxDecoration(
-                color: AppColors.darkGray,
+                color: AppColors.surfaceColor(context),
                 borderRadius: BorderRadius.circular(70),
               ),
               child: Stack(
@@ -347,6 +347,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                     controller: _searchController,
                     textAlign: TextAlign.justify,
                     textAlignVertical: TextAlignVertical.center,
+                    style: TextStyle(color: AppColors.textPrimary(context)),
                     decoration: InputDecoration(
                       border: InputBorder.none,
                       fillColor: Colors.black,
@@ -359,7 +360,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                       hintStyle: TextStyle(
                         fontFamily: 'Product Sans',
                         fontWeight: FontWeight.normal,
-                        color: AppColors.lightBlack,
+                        color: AppColors.textSecondary(context),
                         fontSize: 15,
                       ),
                     ),
@@ -378,7 +379,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                           icon: SvgPicture.asset(
                             'assets/images/filter.svg',
                             width: 20,
-                            color: AppColors.myBlack,
+                            color: AppColors.textPrimary(context),
                           ),
                           onPressed: _showFilters,
                         ),
@@ -434,7 +435,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                         Text(
                           'History',
                           style: TextStyle(
-                            color: AppColors.myGray,
+                            color: AppColors.textSecondary(context),
                             fontFamily: 'Product Sans',
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -461,7 +462,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                       Text(
                         'No search history yet',
                         style: TextStyle(
-                          color: AppColors.myGray.withOpacity(0.7),
+                          color: AppColors.textSecondary(context).withOpacity(0.7),
                           fontSize: 14,
                         ),
                       )
@@ -544,14 +545,14 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                         children: [
                           Icon(
                             Icons.search_off,
-                            color: AppColors.myGray,
+                            color: AppColors.textSecondary(context),
                             size: 48,
                           ),
                           const SizedBox(height: 16),
                           Text(
                             'No programs found matching your criteria.',
                             style: TextStyle(
-                              color: AppColors.myGray,
+                              color: AppColors.textSecondary(context),
                               fontSize: 16,
                             ),
                             textAlign: TextAlign.center,
@@ -650,7 +651,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         margin: const EdgeInsets.only(right: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.myGray,
+          color: AppColors.surfaceColor(context),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -659,7 +660,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
             Text(
               text,
               style: TextStyle(
-                color: AppColors.myBlack,
+                color: AppColors.textPrimary(context),
                 fontSize: 13,
                 fontFamily: 'Product Sans',
               ),
@@ -673,7 +674,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
               child: Icon(
                 Icons.close,
                 size: 16,
-                color: AppColors.myBlack,
+                color: AppColors.textPrimary(context),
               ),
             ),
           ],
@@ -701,7 +702,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: AppColors.myGray,
+          color: AppColors.surfaceColor(context),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Padding(
@@ -723,7 +724,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                             fontFamily: 'Product Sans',
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.myBlack,
+                            color: AppColors.textPrimary(context),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -758,7 +759,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                         icon: SvgPicture.asset(
                           'assets/images/save.svg',
                           width: 25,
-                          color: AppColors.myBlack,
+                          color: AppColors.textPrimary(context),
                         ),
                       ),
                     ),
@@ -771,7 +772,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                       icon: SvgPicture.asset(
                         'assets/images/compare.svg',
                         width: 25,
-                        color: isSelected ? AppColors.lightBlue : AppColors.myBlack,
+                        color: isSelected ? AppColors.lightBlue : AppColors.textPrimary(context),
                       ),
                     ),
                   ),
@@ -846,7 +847,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
           style: TextStyle(
             fontFamily: 'Product Sans',
             fontWeight: FontWeight.normal,
-            color: AppColors.myBlack.withOpacity(0.7),
+            color: AppColors.textSecondary(context),
             fontSize: 13,
           ),
         ),
@@ -856,7 +857,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
           style: TextStyle(
             fontFamily: 'Product Sans',
             fontWeight: FontWeight.bold,
-            color: AppColors.myBlack,
+            color: AppColors.textPrimary(context),
             fontSize: 14,
           ),
           overflow: TextOverflow.ellipsis,
@@ -910,7 +911,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                 return Container(
                   height: 50,
                   decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: AppColors.myGray)),
+                    border: Border(bottom: BorderSide(color: AppColors.borderColor(context))),
                   ),
                   child: Row(
                     children: [
@@ -951,7 +952,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
       child: Text(
         text,
         style: TextStyle(
-          color: AppColors.myWhite,
+          color: AppColors.textPrimary(context),
           fontSize: 14,
         ),
       ),
@@ -966,7 +967,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         text,
         textAlign: TextAlign.center,
         style: TextStyle(
-          color: AppColors.myWhite,
+          color: AppColors.textPrimary(context),
           fontSize: 14,
         ),
       ),
@@ -1007,7 +1008,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
           ),
           margin: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppColors.myBlack,
+            color: AppColors.backgroundColor(context),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -1021,13 +1022,13 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                     Text(
                       'Program Comparison',
                       style: TextStyle(
-                        color: AppColors.myWhite,
+                        color: AppColors.textPrimary(context),
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     IconButton(
-                      icon: Icon(Icons.close, color: AppColors.myWhite),
+                      icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],

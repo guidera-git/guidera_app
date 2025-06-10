@@ -67,8 +67,15 @@ class WhatsAppBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isUser ? AppColors.darkBlue : AppColors.myWhite;
-    final color = isUser ? AppColors.myWhite : AppColors.myBlack;
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    final bg = isUser
+        ? AppColors.lightBlue
+        : (isDarkMode ? AppColors.lightBlack : AppColors.lightSurface);
+    final color = isUser
+        ? AppColors.myWhite
+        : AppColors.textPrimary(context);
+
     return ClipPath(
       clipper: WhatsAppBubbleClipper(isUser: isUser),
       child: Container(
@@ -145,7 +152,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     "How does entry test preparation work?",
     "What kind of notifications will I receive?",
     "Can I get help with career or academic questions?",
-    "Is Guidera’s university data kept up to date?"
+    "Is Guidera's university data kept up to date?"
   ];
   List<String> suggestions = [];
 
@@ -223,9 +230,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppColors.myBlack, AppColors.myBlack],
+            colors: [AppColors.backgroundColor(context), AppColors.backgroundColor(context)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -243,7 +250,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     child: SvgPicture.asset(
                       'assets/images/back.svg',
                       height: 30,
-                      color: AppColors.myWhite,
+                      color: AppColors.textPrimary(context),
                     ),
                   ),
                 ),
@@ -258,8 +265,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     'How can I assist you?',
                     'Need any help?'
                   ],
-                  style: const TextStyle(
-                    color: AppColors.myWhite,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
                     fontSize: 27,
                     fontWeight: FontWeight.bold,
                   ),
@@ -297,11 +304,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.myWhite,
+                      color: AppColors.surfaceColor(context),
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black26,
+                          color: AppColors.shadowColor(context),
                           blurRadius: 6,
                           offset: Offset(0, 3),
                         ),
@@ -314,7 +321,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                         shrinkWrap: true,
                         itemCount: suggestions.length,
                         separatorBuilder: (_, __) => Divider(
-                            color: AppColors.lightBlack, height: 1),
+                            color: AppColors.borderColor(context), height: 1),
                         itemBuilder: (context, i) {
                           final s = suggestions[i];
                           return InkWell(
@@ -326,9 +333,9 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Text(s,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 15,
-                                      color: AppColors.myBlack)),
+                                      color: AppColors.textPrimary(context))),
                             ),
                           );
                         },
@@ -343,19 +350,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                         child: Container(
                           height: 50,
                           decoration: BoxDecoration(
-                            color: AppColors.lightGray,
+                            color: AppColors.surfaceColor(context),
                             borderRadius: BorderRadius.circular(30),
                           ),
                           child: TextField(
                             focusNode: focusNode,
                             controller: ctrl,
                             onChanged: _onChanged,
-                            style: const TextStyle(
-                                fontSize: 15, color: AppColors.myBlack),
+                            style: TextStyle(
+                                fontSize: 15, color: AppColors.textPrimary(context)),
                             decoration: InputDecoration(
                               hintText: 'Type your message...',
-                              hintStyle: const TextStyle(
-                                  color: AppColors.lightBlack),
+                              hintStyle: TextStyle(
+                                  color: AppColors.textSecondary(context)),
                               contentPadding:
                               const EdgeInsets.symmetric(horizontal: 20),
                               border: InputBorder.none,

@@ -33,10 +33,20 @@ class _UniversityInformationState extends State<UniversityInformation> {
     'About University',
   ];
 
-  static const List<Color> rowColors = [
-    Color(0xFF565756),
-    Color(0xFF3F3F3F),
-  ];
+  List<Color> _getRowColors(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    if (isDarkMode) {
+      return [
+        Color(0xFF565756),
+        Color(0xFF3F3F3F),
+      ];
+    } else {
+      return [
+        AppColors.lightSurface,
+        Color(0xFFF5F5F5),
+      ];
+    }
+  }
 
   void _toggleSave() {
     setState(() {
@@ -179,9 +189,11 @@ class _UniversityInformationState extends State<UniversityInformation> {
   }
 
   Widget _buildMapConsentCard() {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
       margin: const EdgeInsets.all(16),
-      color: AppColors.myWhite,
+      color: AppColors.surfaceColor(context),
       child: Stack(
         children: [
           // Background Image
@@ -203,7 +215,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                   "To activate the map, click on the \"Show map\" button. We would like to point out that data will be transmitted to Google Maps after activation. You can find out more in our privacy policy. You can revoke your consent to the transmission of data at any time.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: AppColors.myBlack,
+                    color: AppColors.textPrimary(context),
                     fontSize: 12,
                     fontFamily: "ProductSans",
                   ),
@@ -236,6 +248,8 @@ class _UniversityInformationState extends State<UniversityInformation> {
   }
 
   Widget _buildTableRow(String label, String value, int rowIndex) {
+    final rowColors = _getRowColors(context);
+
     return Container(
       decoration: BoxDecoration(
         color: rowColors[rowIndex % rowColors.length],
@@ -248,8 +262,8 @@ class _UniversityInformationState extends State<UniversityInformation> {
             flex: 4,
             child: Text(
               label,
-              style: const TextStyle(
-                color: AppColors.myWhite,
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
                 fontSize: 14,
                 fontFamily: "ProductSans",
                 fontWeight: FontWeight.bold,
@@ -273,7 +287,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
               child: Text(
                 value,
                 style: TextStyle(
-                  color: AppColors.myWhite,
+                  color: AppColors.lightBlue,
                   fontSize: 14,
                   fontFamily: "ProductSans",
                   decoration: TextDecoration.underline,
@@ -283,7 +297,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                 : Text(
               value,
               style: TextStyle(
-                color: AppColors.myWhite,
+                color: AppColors.textPrimary(context),
                 fontSize: 14,
                 fontFamily: "ProductSans",
                 fontWeight: FontWeight.bold,
@@ -316,18 +330,27 @@ class _UniversityInformationState extends State<UniversityInformation> {
 
   Widget _buildInfoChip(int index) {
     bool isSelected = selectedIndex == index;
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: () => setState(() => selectedIndex = index),
       child: Chip(
-        backgroundColor: isSelected ? AppColors.darkBlue : AppColors.darkGray,
+        backgroundColor: isSelected
+            ? AppColors.lightBlue
+            : AppColors.surfaceColor(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.myBlack, width: 3),
+          side: BorderSide(
+              color: AppColors.borderColor(context),
+              width: 1
+          ),
         ),
         label: Text(
           chipLabels[index],
           style: TextStyle(
-            color: isSelected ? AppColors.myWhite : AppColors.myBlack,
+            color: isSelected
+                ? AppColors.myWhite
+                : AppColors.textPrimary(context),
             fontSize: 12,
             fontFamily: 'Product Sans',
           ),
@@ -340,7 +363,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
   void _showMapBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.myBlack,
+      backgroundColor: AppColors.surfaceColor(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -354,14 +377,14 @@ class _UniversityInformationState extends State<UniversityInformation> {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.myWhite,
+                color: AppColors.textPrimary(context),
               ),
             ),
             const SizedBox(height: 16),
             Text(
               "Your location will be shared with the selected app.",
               style: TextStyle(
-                color: AppColors.myWhite,
+                color: AppColors.textSecondary(context),
                 fontSize: 16,
               ),
             ),
@@ -407,7 +430,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
+      backgroundColor: AppColors.backgroundColor(context),
       body: Stack(
         children: [
           Column(
@@ -426,7 +449,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           fontFamily: "ProductSans",
-                          color: AppColors.myWhite,
+                          color: AppColors.textPrimary(context),
                           height: 1.2,
                         ),
                         maxLines: 2,
@@ -447,7 +470,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                             key: ValueKey<bool>(isSaved),
                             height: 34,
                             colorFilter: ColorFilter.mode(
-                              AppColors.myWhite,
+                              AppColors.textPrimary(context),
                               BlendMode.srcIn,
                             ),
                           ),
@@ -470,7 +493,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                             widget.program.universityTitle,
                             style: TextStyle(
                               fontStyle: FontStyle.italic,
-                              color: AppColors.myWhite,
+                              color: AppColors.textPrimary(context),
                               fontSize: 16,
                               fontFamily: "ProductSans",
                             ),
@@ -483,7 +506,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                             "assets/images/dot.svg",
                             height: 15,
                             colorFilter: ColorFilter.mode(
-                              AppColors.darkBlue,
+                              AppColors.lightBlue,
                               BlendMode.srcIn,
                             ),
                           ),
@@ -491,7 +514,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                         Text(
                           widget.program.location,
                           style: TextStyle(
-                            color: AppColors.darkGray,
+                            color: AppColors.textSecondary(context),
                             fontSize: 16,
                             fontStyle: FontStyle.italic,
                             fontFamily: "ProductSans",
@@ -511,7 +534,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                             "assets/images/share.svg",
                             height: 22,
                             colorFilter: ColorFilter.mode(
-                              AppColors.darkBlue,
+                              AppColors.lightBlue,
                               BlendMode.srcIn,
                             ),
                           ),
@@ -526,7 +549,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                             "assets/images/map.svg",
                             height: 22,
                             colorFilter: ColorFilter.mode(
-                              AppColors.darkBlue,
+                              AppColors.lightBlue,
                               BlendMode.srcIn,
                             ),
                           ),
@@ -549,10 +572,19 @@ class _UniversityInformationState extends State<UniversityInformation> {
                   future: _fetchSectionData(selectedIndex),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.lightBlue,
+                          )
+                      );
                     }
                     if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
+                      return Center(
+                          child: Text(
+                            'Error: ${snapshot.error}',
+                            style: TextStyle(color: AppColors.textPrimary(context)),
+                          )
+                      );
                     }
                     final data = snapshot.data?.first ?? {};
                     final entries = data.entries.toList();
@@ -589,7 +621,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                   "assets/images/back.svg",
                   height: 28,
                   colorFilter: ColorFilter.mode(
-                    AppColors.myWhite,
+                    AppColors.textPrimary(context),
                     BlendMode.srcIn,
                   ),
                 ),

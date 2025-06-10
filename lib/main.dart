@@ -1,32 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:guidera_app/screens/analytics_screen.dart';
-import 'package:guidera_app/screens/entrytest-screen.dart';
-import 'package:guidera_app/screens/splash_screen.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:guidera_app/screens/saved_programs_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:guidera_app/providers/theme_provider.dart';
 import 'package:guidera_app/theme/theme.dart';
-
+import 'package:guidera_app/screens/splash_screen.dart';
 
 void main() {
   runApp(
-    const ProviderScope(
-      child: GuideraApp(),
+    ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: const MyApp(),
     ),
   );
 }
 
-class GuideraApp extends StatelessWidget {
-  const GuideraApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Guidera',
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: ThemeMode.system, // Auto-switch between light/dark mode
-      home: SplashScreen(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'Guidera',
+          debugShowCheckedModeBanner: false,
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: themeProvider.themeMode,
+          home: const SplashScreen(),
+        );
+      },
     );
   }
 }

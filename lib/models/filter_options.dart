@@ -68,8 +68,8 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
     builder: (context) => StatefulBuilder(
       builder: (context, setState) => Container(
         height: MediaQuery.of(context).size.height * 0.88,
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceColor(context),
           borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -81,7 +81,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                 Text(
                   'Filters',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: AppColors.textPrimary(context),
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.8,
@@ -90,7 +90,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                 IconButton(
                   icon: SvgPicture.asset(
                     'assets/images/close.svg',
-                    color: Colors.black,
+                    color: AppColors.textPrimary(context),
                     width: 24,
                   ),
                   onPressed: () => Navigator.pop(context),
@@ -105,6 +105,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                   children: [
                     // Location Filter
                     buildFilterSection(
+                      context: context,
                       title: 'Location',
                       child: FutureBuilder<List<String>>(
                         future: ApiService().getLocations(),
@@ -120,13 +121,14 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                           return Container(
                             height: 150,
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
+                              color: AppColors.backgroundColor(context),
                               borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: AppColors.borderColor(context)),
                             ),
                             child: ListView.separated(
                               padding: const EdgeInsets.all(12),
                               itemCount: locations.length,
-                              separatorBuilder: (_, __) => Divider(color: Colors.black.withOpacity(0.1)),
+                              separatorBuilder: (_, __) => Divider(color: AppColors.borderColor(context)),
                               itemBuilder: (context, index) => InkWell(
                                 onTap: () => setState(() =>
                                 _currentFilters.location = _currentFilters.location == locations[index]
@@ -139,7 +141,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                                       width: 18,
                                       color: _currentFilters.location == locations[index]
                                           ? AppColors.lightBlue
-                                          : Colors.black,
+                                          : AppColors.textPrimary(context),
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
@@ -147,7 +149,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                                       style: TextStyle(
                                         color: _currentFilters.location == locations[index]
                                             ? AppColors.lightBlue
-                                            : Colors.black,
+                                            : AppColors.textPrimary(context),
                                         fontSize: 16,
                                         fontWeight: _currentFilters.location == locations[index]
                                             ? FontWeight.w600
@@ -165,6 +167,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
 
                     // University Filter
                     buildFilterSection(
+                      context: context,
                       title: 'University',
                       child: FutureBuilder<List<String>>(
                         future: ApiService().getUniversityNames(),
@@ -180,13 +183,14 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                           return Container(
                             height: 150,
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
+                              color: AppColors.backgroundColor(context),
                               borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: AppColors.borderColor(context)),
                             ),
                             child: ListView.separated(
                               padding: const EdgeInsets.all(12),
                               itemCount: universities.length + 1,
-                              separatorBuilder: (_, __) => Divider(color: Colors.black.withOpacity(0.1)),
+                              separatorBuilder: (_, __) => Divider(color: AppColors.borderColor(context)),
                               itemBuilder: (context, index) {
                                 if (index == 0) {
                                   return InkWell(
@@ -198,7 +202,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                                           size: 18,
                                           color: _currentFilters.universityTitle == null
                                               ? AppColors.lightBlue
-                                              : Colors.black,
+                                              : AppColors.textPrimary(context),
                                         ),
                                         const SizedBox(width: 12),
                                         Text(
@@ -206,7 +210,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                                           style: TextStyle(
                                             color: _currentFilters.universityTitle == null
                                                 ? AppColors.lightBlue
-                                                : Colors.black,
+                                                : AppColors.textPrimary(context),
                                             fontSize: 16,
                                             fontWeight: _currentFilters.universityTitle == null
                                                 ? FontWeight.w600
@@ -231,7 +235,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                                         size: 18,
                                         color: _currentFilters.universityTitle == university
                                             ? AppColors.lightBlue
-                                            : Colors.black,
+                                            : AppColors.textPrimary(context),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -240,7 +244,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                                           style: TextStyle(
                                             color: _currentFilters.universityTitle == university
                                                 ? AppColors.lightBlue
-                                                : Colors.black,
+                                                : AppColors.textPrimary(context),
                                             fontSize: 14,
                                             fontWeight: _currentFilters.universityTitle == university
                                                 ? FontWeight.w600
@@ -261,6 +265,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
 
                     // Program Filter
                     buildFilterSection(
+                      context: context,
                       title: 'Program',
                       child: FutureBuilder<List<String>>(
                         future: ApiService().getProgramNames(),
@@ -276,13 +281,14 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                           return Container(
                             height: 150,
                             decoration: BoxDecoration(
-                              color: Colors.grey[200],
+                              color: AppColors.backgroundColor(context),
                               borderRadius: BorderRadius.circular(15),
+                              border: Border.all(color: AppColors.borderColor(context)),
                             ),
                             child: ListView.separated(
                               padding: const EdgeInsets.all(12),
                               itemCount: programs.length + 1,
-                              separatorBuilder: (_, __) => Divider(color: Colors.black.withOpacity(0.1)),
+                              separatorBuilder: (_, __) => Divider(color: AppColors.borderColor(context)),
                               itemBuilder: (context, index) {
                                 if (index == 0) {
                                   return InkWell(
@@ -294,7 +300,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                                           size: 18,
                                           color: _currentFilters.programTitle == null
                                               ? AppColors.lightBlue
-                                              : Colors.black,
+                                              : AppColors.textPrimary(context),
                                         ),
                                         const SizedBox(width: 12),
                                         Text(
@@ -302,7 +308,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                                           style: TextStyle(
                                             color: _currentFilters.programTitle == null
                                                 ? AppColors.lightBlue
-                                                : Colors.black,
+                                                : AppColors.textPrimary(context),
                                             fontSize: 16,
                                             fontWeight: _currentFilters.programTitle == null
                                                 ? FontWeight.w600
@@ -327,7 +333,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                                         size: 18,
                                         color: _currentFilters.programTitle == program
                                             ? AppColors.lightBlue
-                                            : Colors.black,
+                                            : AppColors.textPrimary(context),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -336,7 +342,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                                           style: TextStyle(
                                             color: _currentFilters.programTitle == program
                                                 ? AppColors.lightBlue
-                                                : Colors.black,
+                                                : AppColors.textPrimary(context),
                                             fontSize: 14,
                                             fontWeight: _currentFilters.programTitle == program
                                                 ? FontWeight.w600
@@ -357,14 +363,21 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
 
                     // Total Fee Range Filter
                     buildFilterSection(
+                      context: context,
                       title: 'Total Fee Range (PKR)',
                       child: Column(
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('Min: ${_currentFilters.minTotalFee.toInt().toString()}'),
-                              Text('Max: ${_currentFilters.maxTotalFee.toInt().toString()}'),
+                              Text(
+                                'Min: ${_currentFilters.minTotalFee.toInt().toString()}',
+                                style: TextStyle(color: AppColors.textPrimary(context)),
+                              ),
+                              Text(
+                                'Max: ${_currentFilters.maxTotalFee.toInt().toString()}',
+                                style: TextStyle(color: AppColors.textPrimary(context)),
+                              ),
                             ],
                           ),
                           SliderTheme(
@@ -406,10 +419,13 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[200],
-                        foregroundColor: Colors.black,
+                        backgroundColor: AppColors.backgroundColor(context),
+                        foregroundColor: AppColors.textPrimary(context),
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: AppColors.borderColor(context)),
+                        ),
                       ),
                       onPressed: () => setState(() => _currentFilters.reset()),
                       child: const Text('Reset Filters'),
@@ -441,7 +457,7 @@ void showFilters(BuildContext context, FilterOptions currentFilters, Function(Fi
   );
 }
 
-Widget buildFilterSection({required String title, required Widget child}) {
+Widget buildFilterSection({required BuildContext context, required String title, required Widget child}) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 24),
     child: Column(
@@ -450,7 +466,7 @@ Widget buildFilterSection({required String title, required Widget child}) {
         Text(
           title,
           style: TextStyle(
-            color: Colors.black,
+            color: AppColors.textPrimary(context),
             fontSize: 18,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
