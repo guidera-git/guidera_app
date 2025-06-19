@@ -16,7 +16,9 @@ import 'package:guidera_app/models/filter_options.dart';
 import 'home_screen.dart';
 
 class UniversitySearchScreen extends StatefulWidget {
-  const UniversitySearchScreen({super.key});
+  const UniversitySearchScreen({super.key, this.initialSearchQuery});
+
+  final String? initialSearchQuery;
 
   @override
   State<UniversitySearchScreen> createState() => _UniversitySearchScreenState();
@@ -42,6 +44,9 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialSearchQuery != null) {
+      _searchController.text = widget.initialSearchQuery!;
+    }
     _loadPrograms();
     _loadSearchHistory();
     _searchController.addListener(_onSearchChanged);
@@ -51,7 +56,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   void dispose() {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
-    _searchTimer?.cancel(); // FIXED: Cancel timer
+    _searchTimer?.cancel();
     super.dispose();
   }
 
@@ -59,7 +64,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     // Cancel previous timer
     _searchTimer?.cancel();
 
-    // Set new timer for debounced search (don't add to history yet)
+    // Set new timer for debounced search
     _searchTimer = Timer(Duration(milliseconds: 500), () {
       _performSearch();
     });
@@ -102,7 +107,6 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         final decoded = jsonDecode(response.body);
         print('decoded.runtimeType = ${decoded.runtimeType}');
 
-        // FIXED: Handle the API response correctly
         if (decoded is List) {
           setState(() {
             _programs = decoded
@@ -134,7 +138,6 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   }
 
   void _handleAuthenticationError() {
-    // Show dialog to inform user about authentication issue
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -148,15 +151,13 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // Navigate to login screen - replace with your actual login screen
-                // Navigator.pushReplacementNamed(context, '/login');
               },
               child: const Text('Login'),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _loadProgramsWithoutAuth(); // Try loading without auth as fallback
+                _loadProgramsWithoutAuth();
               },
               child: const Text('Continue as Guest'),
             ),
@@ -166,7 +167,6 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     );
   }
 
-  // Fallback method to load programs without authentication
   Future<void> _loadProgramsWithoutAuth() async {
     setState(() {
       _isLoading = true;
@@ -174,12 +174,9 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     });
 
     try {
-      // Try to get universities first (might not require auth)
       final response = await _apiService.getAllPrograms();
 
       if (response.statusCode == 200) {
-        // If universities endpoint works, create sample programs
-        // This is a temporary fallback - you should implement proper guest access
         setState(() {
           _programs = _createSamplePrograms();
           _filteredPrograms = List.from(_programs);
@@ -194,14 +191,13 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
       }
     } catch (e) {
       setState(() {
-        _programs = _createSamplePrograms(); // Use sample data as last resort
+        _programs = _createSamplePrograms();
         _filteredPrograms = List.from(_programs);
         _isLoading = false;
       });
     }
   }
 
-  // Create sample programs for fallback
   List<Program> _createSamplePrograms() {
     return [
       Program(
@@ -211,6 +207,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         programDuration: '4 years',
         creditHours: '133',
         fee: [Fee(totalTutionFee: '1,440,000 PKR', perCreditHourFee: '10,000 PKR')],
+        calculatedTotalFee: '1,440,000 PKR',
         universityId: 'ucp',
         universityTitle: 'University of Central Punjab',
         location: 'Lahore',
@@ -222,6 +219,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         programDuration: '4 years',
         creditHours: '130',
         fee: [Fee(totalTutionFee: '1,120,000 PKR', perCreditHourFee: '8,500 PKR')],
+        calculatedTotalFee: '1,120,000 PKR',
         universityId: 'fast',
         universityTitle: 'FAST National University',
         location: 'Islamabad',
@@ -233,6 +231,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         programDuration: '4 years',
         creditHours: '124',
         fee: [Fee(totalTutionFee: '880,000 PKR', perCreditHourFee: '7,000 PKR')],
+        calculatedTotalFee: '880,000 PKR',
         universityId: 'comsats',
         universityTitle: 'COMSATS University',
         location: 'Karachi',
@@ -250,12 +249,10 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
       return;
     }
 
-    // FIXED: Don't add to history on every keystroke
-    // Only add when user submits or stops typing for meaningful searches
-
     setState(() {
       _filteredPrograms = _programs.where((program) {
         return program.programTitle.toLowerCase().contains(query) ||
+            program.displayTitle.toLowerCase().contains(query) ||
             program.universityTitle.toLowerCase().contains(query) ||
             program.location.toLowerCase().contains(query);
       }).toList();
@@ -282,7 +279,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
               Expanded(child: _buildBody()),
             ],
           ),
-          // Draggable Compare Button – appears only when at least 2 programs are selected
+          // Draggable Compare Button
           if (_selectedForComparison.length >= 2)
             Positioned(
               left: _compareButtonOffset.dx,
@@ -339,13 +336,20 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
               decoration: BoxDecoration(
                 color: AppColors.surfaceColor(context),
                 borderRadius: BorderRadius.circular(70),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadowColor(context),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  ),
+                ],
               ),
               child: Stack(
                 alignment: Alignment.centerLeft,
                 children: [
                   TextField(
                     controller: _searchController,
-                    textAlign: TextAlign.justify,
+                    textAlign: TextAlign.start,
                     textAlignVertical: TextAlignVertical.center,
                     style: TextStyle(color: AppColors.textPrimary(context)),
                     decoration: InputDecoration(
@@ -355,6 +359,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                         left: 15,
                         top: 4,
                         bottom: 8,
+                        right: 70,
                       ),
                       hintText: 'Search programs or universities...',
                       hintStyle: TextStyle(
@@ -375,13 +380,21 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                     right: 0,
                     child: Row(
                       children: [
-                        IconButton(
-                          icon: SvgPicture.asset(
-                            'assets/images/filter.svg',
-                            width: 20,
-                            color: AppColors.textPrimary(context),
+                        Container(
+                          height: 35,
+                          margin: const EdgeInsets.only(right: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightBlue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          onPressed: _showFilters,
+                          child: IconButton(
+                            icon: SvgPicture.asset(
+                              'assets/images/filter.svg',
+                              width: 20,
+                              color: AppColors.lightBlue,
+                            ),
+                            onPressed: _showFilters,
+                          ),
                         ),
                         Container(
                           height: 35,
@@ -619,6 +632,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                 borderRadius: BorderRadius.circular(20),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              elevation: 4,
             ),
             icon: SvgPicture.asset(
               'assets/images/recommend.svg',
@@ -637,7 +651,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
       setState(() {
         _currentFilters = newFilters;
       });
-      _loadPrograms(); // Reload programs with new filters
+      _loadPrograms();
     });
   }
 
@@ -653,6 +667,10 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         decoration: BoxDecoration(
           color: AppColors.surfaceColor(context),
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.borderColor(context),
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -690,6 +708,8 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         required bool isSelected,
         required VoidCallback onCompareToggle,
       }) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -702,8 +722,24 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: AppColors.surfaceColor(context),
+          color: isDarkMode
+              ? AppColors.surfaceColor(context)
+              : AppColors.lightSurface.withOpacity(0.8),
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDarkMode
+                ? AppColors.borderColor(context).withOpacity(0.3)
+                : AppColors.lightBorder.withOpacity(0.6),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadowColor(context),
+              blurRadius: 6,
+              spreadRadius: 1,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -730,7 +766,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          program.programTitle,
+                          program.displayTitle, // Use displayTitle for standardized names
                           style: TextStyle(
                             fontFamily: 'Product Sans',
                             fontSize: 16,
@@ -742,44 +778,40 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                       ],
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => SavedProgramsScreen()),
-                      );
-                    },
-                    child: Transform.translate(
-                      offset: const Offset(20, 0),
-                      child: IconButton(
+                  Row(
+                    children: [
+                      IconButton(
                         padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                         onPressed: () {
-                          // Save functionality placeholder
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => SavedProgramsScreen()),
+                          );
                         },
                         icon: SvgPicture.asset(
                           'assets/images/save.svg',
-                          width: 25,
+                          width: 22,
                           color: AppColors.textPrimary(context),
                         ),
                       ),
-                    ),
-                  ),
-                  Transform.translate(
-                    offset: const Offset(10, 0),
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: onCompareToggle,
-                      icon: SvgPicture.asset(
-                        'assets/images/compare.svg',
-                        width: 25,
-                        color: isSelected ? AppColors.lightBlue : AppColors.textPrimary(context),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        onPressed: onCompareToggle,
+                        icon: SvgPicture.asset(
+                          'assets/images/compare.svg',
+                          width: 22,
+                          color: isSelected ? AppColors.lightBlue : AppColors.textPrimary(context),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              // Program details - Updated layout
+              // Program details
               Row(
                 children: [
                   Expanded(
@@ -797,7 +829,46 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                     child: _buildLabelValue('Credit Hours', program.creditHours),
                   ),
                   Expanded(
-                    child: _buildLabelValue('Location', program.location),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Location',
+                                style: TextStyle(
+                                  fontFamily: 'Product Sans',
+                                  fontWeight: FontWeight.normal,
+                                  color: AppColors.textSecondary(context),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: Colors.red,
+                                    size: 16,
+                                  ),
+                                  Text(
+                                    program.location,
+                                    style: TextStyle(
+                                      fontFamily: 'Product Sans',
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary(context),
+                                      fontSize: 14,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -876,53 +947,76 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
       'Location',
     ];
 
-    // Calculate total width needed for all columns
     final double criteriaWidth = 150;
     final double programWidth = 200;
     final double totalWidth = criteriaWidth + (selectedPrograms.length * programWidth);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SizedBox(
-        width: totalWidth,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Row
-            Container(
-              height: 60,
-              decoration: BoxDecoration(
-                color: AppColors.lightBlue.withOpacity(0.3),
-              ),
-              child: Row(
-                children: [
-                  _buildHeaderCell('Criteria', criteriaWidth),
-                  ...selectedPrograms.map((program) => _buildHeaderCell(program.universityTitle, programWidth)),
-                ],
-              ),
-            ),
-            // Data Rows
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: attributes.length,
-              itemBuilder: (context, index) {
-                final attr = attributes[index];
-                return Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: AppColors.borderColor(context))),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceColor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.borderColor(context),
+          width: 1,
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: SizedBox(
+          width: totalWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header Row
+              Container(
+                height: 60,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.lightBlue, AppColors.darkBlue],
                   ),
-                  child: Row(
-                    children: [
-                      _buildAttributeCell(attr, criteriaWidth),
-                      ...selectedPrograms.map((program) => _buildValueCell(_getAttributeValue(program, attr), programWidth)),
-                    ],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
                   ),
-                );
-              },
-            ),
-          ],
+                ),
+                child: Row(
+                  children: [
+                    _buildHeaderCell('Criteria', criteriaWidth),
+                    ...selectedPrograms.map((program) => _buildHeaderCell(program.universityTitle, programWidth)),
+                  ],
+                ),
+              ),
+              // Data Rows
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: attributes.length,
+                itemBuilder: (context, index) {
+                  final attr = attributes[index];
+                  return Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: index % 2 == 0
+                          ? AppColors.surfaceColor(context)
+                          : AppColors.backgroundColor(context),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: AppColors.borderColor(context),
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        _buildAttributeCell(attr, criteriaWidth),
+                        ...selectedPrograms.map((program) => _buildValueCell(_getAttributeValue(program, attr), programWidth)),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -940,6 +1034,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
           fontWeight: FontWeight.bold,
           fontSize: 16,
         ),
+        textAlign: TextAlign.center,
       ),
     );
   }
@@ -954,6 +1049,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         style: TextStyle(
           color: AppColors.textPrimary(context),
           fontSize: 14,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -977,7 +1073,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   String _getAttributeValue(Program program, String attribute) {
     switch (attribute) {
       case 'Program Title':
-        return program.programTitle;
+        return program.displayTitle;
       case 'University':
         return program.universityTitle;
       case 'Duration':
@@ -994,28 +1090,39 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   }
 
   void _showComparisonPopup(List<Program> selectedPrograms) {
-    final double tableHeight = 60 + (6 * 50).toDouble(); // 6 attributes
-
     showDialog(
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.zero,
+        insetPadding: const EdgeInsets.all(20),
         child: Container(
           constraints: BoxConstraints(
-            maxHeight: tableHeight + 100, // Add space for header
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
             maxWidth: MediaQuery.of(context).size.width,
           ),
-          margin: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: AppColors.backgroundColor(context),
             borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadowColor(context),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
+              Container(
                 padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceColor(context),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1035,13 +1142,9 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                 ),
               ),
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Container(
-                      width: constraints.maxWidth,
-                      child: _buildComparisonTable(selectedPrograms),
-                    );
-                  },
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildComparisonTable(selectedPrograms),
                 ),
               ),
             ],

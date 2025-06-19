@@ -4,10 +4,12 @@ class Program {
   final String id;
   final String? programKey;
   final String programTitle;
+  final String? standardizedTitle;
   final String programDescription;
   final String programDuration;
   final String creditHours;
   final List<Fee> fee;
+  final String? calculatedTotalFee;
   final List<ImportantDate>? importantDates;
   final dynamic merit;
   final dynamic teachingSystem;
@@ -17,21 +19,24 @@ class Program {
   final String universityId;
   final String universityTitle;
   final String? mainLink;
+  final String location;
+  final List<String>? additionalLocations;
   final String? qsRanking;
   final SocialLinks? socialLinks;
   final ContactDetails? contactDetails;
   final String? introduction;
   final dynamic campuses;
-  final String location;
 
   Program({
     required this.id,
     this.programKey,
     required this.programTitle,
+    this.standardizedTitle,
     required this.programDescription,
     required this.programDuration,
     required this.creditHours,
     required this.fee,
+    this.calculatedTotalFee,
     this.importantDates,
     this.merit,
     this.teachingSystem,
@@ -41,16 +46,20 @@ class Program {
     required this.universityId,
     required this.universityTitle,
     this.mainLink,
+    required this.location,
+    this.additionalLocations,
     this.qsRanking,
     this.socialLinks,
     this.contactDetails,
     this.introduction,
     this.campuses,
-    required this.location,
   });
 
   // Helper methods for UI display
   int get totalFee {
+    if (calculatedTotalFee != null && calculatedTotalFee!.isNotEmpty) {
+      return _parseFeeAmount(calculatedTotalFee!);
+    }
     if (fee.isEmpty) return 0;
     return _parseFeeAmount(fee.first.totalTutionFee);
   }
@@ -77,27 +86,40 @@ class Program {
   }
 
   String get formattedTotalFee {
+    // Use calculated total fee if available
+    if (calculatedTotalFee != null && calculatedTotalFee!.isNotEmpty && calculatedTotalFee != 'Not Available') {
+      return calculatedTotalFee!;
+    }
+
+    // Fallback to calculating from fee array
     if (totalFee == 0) return 'N/A';
     return '${totalFee.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} PKR';
   }
 
+  // Get display title - prefer standardized title if available
+  String get displayTitle {
+    return standardizedTitle?.isNotEmpty == true ? standardizedTitle! : programTitle;
+  }
+
   static int _parseFeeAmount(String feeString) {
-    if (feeString.isEmpty) return 0;
+    if (feeString.isEmpty || feeString == 'Not Available') return 0;
     // Remove PKR, commas, and any non-numeric characters except decimals
     final cleanFee = feeString.replaceAll(RegExp(r'[^\d]'), '');
     return int.tryParse(cleanFee) ?? 0;
   }
 
-  // FIXED: Correct field mapping for your database structure
+  // Updated factory method to handle new database structure
   factory Program.fromMap(Map<String, dynamic> map) {
     return Program(
-      id: map['program_id']?.toString() ?? '', // FIXED: was 'id', now 'program_id'
+      id: map['program_id']?.toString() ?? map['id']?.toString() ?? '',
       programKey: map['program_key']?.toString(),
       programTitle: map['program_title']?.toString() ?? '',
+      standardizedTitle: map['standardized_title']?.toString(),
       programDescription: map['program_description']?.toString() ?? '',
       programDuration: map['program_duration']?.toString() ?? '',
       creditHours: map['credit_hours']?.toString() ?? '',
-      fee: _parseFeeList(map['fee']), // FIXED: Safe parsing
+      fee: _parseFeeList(map['fee']),
+      calculatedTotalFee: map['calculated_total_fee']?.toString(),
       importantDates: _parseImportantDates(map['important_dates']),
       merit: map['merit'],
       teachingSystem: map['teaching_system'],
@@ -107,61 +129,123 @@ class Program {
       universityId: map['university_id']?.toString() ?? '',
       universityTitle: map['university_title']?.toString() ?? '',
       mainLink: map['main_link']?.toString(),
+      location: map['location']?.toString() ?? '',
+      additionalLocations: _parseStringList(map['additional_locations']),
       qsRanking: map['qs_ranking']?.toString(),
       socialLinks: map['social_links'] != null
-          ? SocialLinks.fromMap(map['social_links'] as Map<String, dynamic>)
+          ? SocialLinks.fromMap(_parseJsonField(map['social_links']))
           : null,
       contactDetails: map['contact_details'] != null
-          ? ContactDetails.fromMap(map['contact_details'] as Map<String, dynamic>)
+          ? ContactDetails.fromMap(_parseJsonField(map['contact_details']))
           : null,
       introduction: map['introduction']?.toString(),
       campuses: map['campuses'],
-      location: map['location']?.toString() ?? '',
     );
   }
 
-  // FIXED: Safe fee parsing
+  // Helper to parse JSONB fields that might be strings or maps
+  static Map<String, dynamic> _parseJsonField(dynamic field) {
+    if (field is Map<String, dynamic>) {
+      return field;
+    } else if (field is String) {
+      try {
+        return jsonDecode(field) as Map<String, dynamic>;
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
+  }
+
+  // Helper to parse string arrays
+  static List<String>? _parseStringList(dynamic listData) {
+    if (listData == null) return null;
+    if (listData is List) {
+      return listData.map((e) => e.toString()).toList();
+    }
+    return null;
+  }
+
+  // Safe fee parsing
   static List<Fee> _parseFeeList(dynamic feeData) {
     if (feeData == null) return [];
-    if (feeData is List) {
-      return feeData
-          .map((e) => Fee.fromMap(e as Map<String, dynamic>))
-          .toList();
+
+    List<dynamic> feeList = [];
+    if (feeData is String) {
+      try {
+        feeList = jsonDecode(feeData) as List<dynamic>;
+      } catch (e) {
+        return [];
+      }
+    } else if (feeData is List) {
+      feeList = feeData;
+    } else {
+      return [];
     }
-    return [];
+
+    return feeList
+        .where((e) => e is Map<String, dynamic>)
+        .map((e) => Fee.fromMap(e as Map<String, dynamic>))
+        .toList();
   }
 
-  // FIXED: Safe important dates parsing
+  // Safe important dates parsing
   static List<ImportantDate>? _parseImportantDates(dynamic datesData) {
     if (datesData == null) return null;
-    if (datesData is List) {
-      return datesData
-          .map((e) => ImportantDate.fromMap(e as Map<String, dynamic>))
-          .toList();
+
+    List<dynamic> datesList = [];
+    if (datesData is String) {
+      try {
+        datesList = jsonDecode(datesData) as List<dynamic>;
+      } catch (e) {
+        return null;
+      }
+    } else if (datesData is List) {
+      datesList = datesData;
+    } else {
+      return null;
     }
-    return null;
+
+    return datesList
+        .where((e) => e is Map<String, dynamic>)
+        .map((e) => ImportantDate.fromMap(e as Map<String, dynamic>))
+        .toList();
   }
 
-  // FIXED: Safe admission criteria parsing
+  // Safe admission criteria parsing
   static List<AdmissionCriteria>? _parseAdmissionCriteria(dynamic criteriaData) {
     if (criteriaData == null) return null;
-    if (criteriaData is List) {
-      return criteriaData
-          .map((e) => AdmissionCriteria.fromMap(e as Map<String, dynamic>))
-          .toList();
+
+    List<dynamic> criteriaList = [];
+    if (criteriaData is String) {
+      try {
+        criteriaList = jsonDecode(criteriaData) as List<dynamic>;
+      } catch (e) {
+        return null;
+      }
+    } else if (criteriaData is List) {
+      criteriaList = criteriaData;
+    } else {
+      return null;
     }
-    return null;
+
+    return criteriaList
+        .where((e) => e is Map<String, dynamic>)
+        .map((e) => AdmissionCriteria.fromMap(e as Map<String, dynamic>))
+        .toList();
   }
 
   Map<String, dynamic> toMap() {
     return {
-      'program_id': id, // FIXED: Use correct field name
+      'program_id': id,
       'program_key': programKey,
       'program_title': programTitle,
+      'standardized_title': standardizedTitle,
       'program_description': programDescription,
       'program_duration': programDuration,
       'credit_hours': creditHours,
       'fee': fee.map((e) => e.toMap()).toList(),
+      'calculated_total_fee': calculatedTotalFee,
       'important_dates': importantDates?.map((e) => e.toMap()).toList(),
       'merit': merit,
       'teaching_system': teachingSystem,
@@ -171,12 +255,13 @@ class Program {
       'university_id': universityId,
       'university_title': universityTitle,
       'main_link': mainLink,
+      'location': location,
+      'additional_locations': additionalLocations,
       'qs_ranking': qsRanking,
       'social_links': socialLinks?.toMap(),
       'contact_details': contactDetails?.toMap(),
       'introduction': introduction,
       'campuses': campuses,
-      'location': location,
     };
   }
 

@@ -23,6 +23,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
   int selectedIndex = 0;
   int _navIndex = 0;
   bool isSaved = false; // Track save state
+  final Map<String, bool> _expandedTexts = {}; // Track expanded state for long texts
 
   final List<String> chipLabels = [
     'Overview',
@@ -71,6 +72,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
         'Duration': widget.program.durationInSemesters,
         'Credit Hours': widget.program.creditHours,
         'Location': widget.program.location,
+        'Additional Locations': widget.program.additionalLocations?.join(', ') ?? 'N/A',
         'University Link': widget.program.mainLink ?? 'N/A',
         'QS Ranking': widget.program.qsRanking ?? 'Not Ranked',
       },
@@ -80,14 +82,12 @@ class _UniversityInformationState extends State<UniversityInformation> {
   List<Map<String, String>> _generateCourseDetails() {
     return [
       {
-        'Program Name': widget.program.programTitle,
-        'Program Key': widget.program.programKey ?? 'N/A',
+        'Program Name': widget.program.displayTitle,
         'Credit Hours': widget.program.creditHours,
         'Duration': widget.program.programDuration,
         'Course Outline': widget.program.courseOutline ?? 'N/A',
-        'Description': widget.program.programDescription.length > 200
-            ? '${widget.program.programDescription.substring(0, 200)}...'
-            : widget.program.programDescription,
+        'Teaching System': widget.program.teachingSystem?.toString() ?? 'N/A',
+        'Description': widget.program.programDescription,
       }
     ];
   }
@@ -98,6 +98,16 @@ class _UniversityInformationState extends State<UniversityInformation> {
 
     for (int i = 0; i < criteria.length; i++) {
       requirements['Requirement ${i + 1}'] = criteria[i].criteria;
+    }
+
+    // Add merit information if available
+    if (widget.program.merit != null) {
+      requirements['Merit Information'] = widget.program.merit.toString();
+    }
+
+    // Add merit formula if available
+    if (widget.program.meritFormula != null && widget.program.meritFormula!.isNotEmpty) {
+      requirements['Merit Formula'] = widget.program.meritFormula!.join(', ');
     }
 
     if (requirements.isEmpty) {
@@ -119,6 +129,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
         'Classes Start': dates?.commencementOfClasses ?? 'N/A',
         'SAT Deadline': dates?.deadlineSAT ?? 'N/A',
         'ACT Deadline': dates?.deadlineACT ?? 'N/A',
+        'Teaching System': widget.program.teachingSystem?.toString() ?? 'N/A',
       },
     ];
   }
@@ -132,34 +143,74 @@ class _UniversityInformationState extends State<UniversityInformation> {
         'Per Credit Hour Fee': widget.program.fee.isNotEmpty
             ? widget.program.fee.first.perCreditHourFee
             : 'N/A',
+        'Calculated Total Fee': widget.program.calculatedTotalFee ?? 'N/A',
         'Total Program Cost': widget.program.formattedTotalFee,
+        'Credit Hours': widget.program.creditHours,
+        'Estimated Per Credit Cost': widget.program.creditFee > 0
+            ? '${widget.program.creditFee.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} PKR'
+            : 'N/A',
       },
     ];
   }
 
   List<Map<String, String>> _generateUniversityInfo() {
+    // Format campuses properly
+    String formattedCampuses = 'N/A';
+    if (widget.program.campuses != null) {
+      try {
+        if (widget.program.campuses is List) {
+          final campusList = widget.program.campuses as List;
+          formattedCampuses = campusList.map((campus) =>
+              campus.toString().replaceAll(RegExp(r'[{}"]'), '')).join('\n• ');
+          if (formattedCampuses.isNotEmpty) {
+            formattedCampuses = '• $formattedCampuses';
+          }
+        } else {
+          formattedCampuses = widget.program.campuses.toString()
+              .replaceAll(RegExp(r'[{}"[\]]'), '')
+              .replaceAll(',', '\n• ');
+          if (formattedCampuses.isNotEmpty) {
+            formattedCampuses = '• $formattedCampuses';
+          }
+        }
+      } catch (e) {
+        formattedCampuses = 'Campus information available on university website';
+      }
+    }
+
     return [
       {
         'University Name': widget.program.universityTitle,
-        'Introduction': widget.program.introduction?.length != null && widget.program.introduction!.length > 300
-            ? '${widget.program.introduction!.substring(0, 300)}...'
-            : widget.program.introduction ?? 'No introduction available',
+        'Introduction': widget.program.introduction ?? 'No introduction available',
         'Main Website': widget.program.mainLink ?? 'N/A',
+        'Primary Location': widget.program.location,
+        'Additional Locations': widget.program.additionalLocations?.join(', ') ?? 'N/A',
         'QS Ranking': widget.program.qsRanking ?? 'Not Ranked',
         'Contact Email': widget.program.contactDetails?.infoEmail ?? 'N/A',
         'Phone': widget.program.contactDetails?.call ?? 'N/A',
         'Facebook': widget.program.socialLinks?.facebook ?? 'N/A',
         'Twitter': widget.program.socialLinks?.twitter ?? 'N/A',
         'Instagram': widget.program.socialLinks?.instagram ?? 'N/A',
+        'Campus Locations': formattedCampuses,
       },
     ];
   }
 
   void _shareApp(BuildContext context) {
     String shareText = "Check out this university: ${widget.program.universityTitle}\n"
-        "Program: ${widget.program.programTitle}\n"
+        "Program: ${widget.program.displayTitle}\n" // Use displayTitle
         "Location: ${widget.program.location}\n"
         "Fee: ${widget.program.formattedTotalFee}";
+
+    // Add additional locations if available
+    if (widget.program.additionalLocations != null && widget.program.additionalLocations!.isNotEmpty) {
+      shareText += "\nAdditional Locations: ${widget.program.additionalLocations!.join(', ')}";
+    }
+
+    // Add QS ranking if available
+    if (widget.program.qsRanking != null) {
+      shareText += "\nQS Ranking: ${widget.program.qsRanking}";
+    }
 
     if (widget.program.mainLink != null) {
       shareText += "\nLink: ${widget.program.mainLink}";
@@ -249,6 +300,13 @@ class _UniversityInformationState extends State<UniversityInformation> {
 
   Widget _buildTableRow(String label, String value, int rowIndex) {
     final rowColors = _getRowColors(context);
+    final isLongText = value.length > 150;
+    final isExpanded = _expandedTexts[label] ?? false;
+
+    String displayValue = value;
+    if (isLongText && !isExpanded) {
+      displayValue = '${value.substring(0, 150)}...';
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -273,36 +331,61 @@ class _UniversityInformationState extends State<UniversityInformation> {
           const SizedBox(width: 25),
           Expanded(
             flex: 6,
-            child: (label.toLowerCase().contains('link') ||
-                label.toLowerCase().contains('website') ||
-                label.toLowerCase().contains('outline') ||
-                label.toLowerCase().contains('email') ||
-                label.toLowerCase().contains('facebook') ||
-                label.toLowerCase().contains('twitter') ||
-                label.toLowerCase().contains('instagram'))
-                ? GestureDetector(
-              onTap: () {
-                _launchURL(value);
-              },
-              child: Text(
-                value,
-                style: TextStyle(
-                  color: AppColors.lightBlue,
-                  fontSize: 14,
-                  fontFamily: "ProductSans",
-                  decoration: TextDecoration.underline,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                (label.toLowerCase().contains('link') ||
+                    label.toLowerCase().contains('website') ||
+                    label.toLowerCase().contains('outline') ||
+                    label.toLowerCase().contains('email') ||
+                    label.toLowerCase().contains('facebook') ||
+                    label.toLowerCase().contains('twitter') ||
+                    label.toLowerCase().contains('instagram'))
+                    ? GestureDetector(
+                  onTap: () {
+                    _launchURL(value);
+                  },
+                  child: Text(
+                    displayValue,
+                    style: TextStyle(
+                      color: AppColors.lightBlue,
+                      fontSize: 14,
+                      fontFamily: "ProductSans",
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                )
+                    : Text(
+                  displayValue,
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 14,
+                    fontFamily: "ProductSans",
+                    fontWeight: FontWeight.normal,
+                  ),
+                  softWrap: true,
                 ),
-              ),
-            )
-                : Text(
-              value,
-              style: TextStyle(
-                color: AppColors.textPrimary(context),
-                fontSize: 14,
-                fontFamily: "ProductSans",
-                fontWeight: FontWeight.bold,
-              ),
-              softWrap: true,
+                if (isLongText)
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _expandedTexts[label] = !isExpanded;
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        isExpanded ? 'See less' : 'See more',
+                        style: TextStyle(
+                          color: AppColors.lightBlue,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ],
@@ -330,22 +413,26 @@ class _UniversityInformationState extends State<UniversityInformation> {
 
   Widget _buildInfoChip(int index) {
     bool isSelected = selectedIndex == index;
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () => setState(() => selectedIndex = index),
-      child: Chip(
-        backgroundColor: isSelected
-            ? AppColors.lightBlue
-            : AppColors.surfaceColor(context),
-        shape: RoundedRectangleBorder(
+      child: Container(
+        margin: const EdgeInsets.only(right: 6, bottom: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.lightBlue
+              : AppColors.surfaceColor(context),
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-              color: AppColors.borderColor(context),
-              width: 1
-          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadowColor(context),
+              blurRadius: 2,
+              spreadRadius: 1,
+            ),
+          ],
         ),
-        label: Text(
+        child: Text(
           chipLabels[index],
           style: TextStyle(
             color: isSelected
@@ -353,9 +440,9 @@ class _UniversityInformationState extends State<UniversityInformation> {
                 : AppColors.textPrimary(context),
             fontSize: 12,
             fontFamily: 'Product Sans',
+            fontWeight: FontWeight.w500,
           ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       ),
     );
   }
@@ -444,35 +531,34 @@ class _UniversityInformationState extends State<UniversityInformation> {
                   children: [
                     Expanded(
                       child: Text(
-                        widget.program.programTitle,
+                        widget.program.displayTitle,
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           fontFamily: "ProductSans",
                           color: AppColors.textPrimary(context),
                           height: 1.2,
                         ),
-                        maxLines: 2,
+                        maxLines: 3,
                         softWrap: true,
+                        overflow: TextOverflow.visible,
                       ),
                     ),
+                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: _toggleSave,
-                      child: Transform.translate(
-                        offset: const Offset(8, 1),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 300),
-                          transitionBuilder: (Widget child, Animation<double> animation) {
-                            return ScaleTransition(scale: animation, child: child);
-                          },
-                          child: SvgPicture.asset(
-                            isSaved ? "assets/images/filledsave.svg" : "assets/images/save.svg",
-                            key: ValueKey<bool>(isSaved),
-                            height: 34,
-                            colorFilter: ColorFilter.mode(
-                              AppColors.textPrimary(context),
-                              BlendMode.srcIn,
-                            ),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          return ScaleTransition(scale: animation, child: child);
+                        },
+                        child: SvgPicture.asset(
+                          isSaved ? "assets/images/filledsave.svg" : "assets/images/save.svg",
+                          key: ValueKey<bool>(isSaved),
+                          height: 32,
+                          colorFilter: ColorFilter.mode(
+                            AppColors.textPrimary(context),
+                            BlendMode.srcIn,
                           ),
                         ),
                       ),
@@ -498,6 +584,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
                               fontFamily: "ProductSans",
                             ),
                             overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
                           ),
                         ),
                         Padding(
@@ -522,6 +609,19 @@ class _UniversityInformationState extends State<UniversityInformation> {
                         ),
                       ],
                     ),
+                    // Show additional locations if available
+                    if (widget.program.additionalLocations != null && widget.program.additionalLocations!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Also available in: ${widget.program.additionalLocations!.join(', ')}',
+                        style: TextStyle(
+                          color: AppColors.textSecondary(context),
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                          fontFamily: "ProductSans",
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 18),
                     Row(
                       children: [
@@ -554,6 +654,26 @@ class _UniversityInformationState extends State<UniversityInformation> {
                             ),
                           ),
                         ),
+                        // Show QS ranking if available
+                        if (widget.program.qsRanking != null) ...[
+                          const SizedBox(width: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.lightBlue.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'QS #${widget.program.qsRanking}',
+                              style: TextStyle(
+                                color: AppColors.lightBlue,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'ProductSans',
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 14),

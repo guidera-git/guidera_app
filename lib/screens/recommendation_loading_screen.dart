@@ -7,7 +7,7 @@ import '../Widgets/header.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
 import 'recommendation_results_screen.dart';
-import '../models/user_profile.dart'; // we’ll parse into this model
+import '../models/user_profile.dart'; // we'll parse into this model
 
 class RecommendationLoadingScreen extends StatefulWidget {
   final Map<String, dynamic> payload;
@@ -80,22 +80,26 @@ class _RecommendationLoadingScreenState
       _controller.dispose();
 
       // Navigate to results, passing both userName and degree
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => RecommendationResultsScreen(
-            userName: _userName!,
-            recommendedDegree: predictedDegree,
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RecommendationResultsScreen(
+              userName: _userName!,
+              recommendedDegree: predictedDegree,
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      _msgTimer.cancel();
-      _controller.dispose();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-      Navigator.pop(context);
+      if (mounted) {
+        _msgTimer.cancel();
+        _controller.dispose();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e")),
+        );
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -109,10 +113,9 @@ class _RecommendationLoadingScreenState
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final iconColor = isDark ? AppColors.myWhite : AppColors.myBlack;
 
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
+      backgroundColor: AppColors.backgroundColor(context),
       body: Stack(
         children: [
           Column(
@@ -127,7 +130,7 @@ class _RecommendationLoadingScreenState
             child: IconButton(
               icon: SvgPicture.asset(
                 'assets/images/back.svg',
-                color: iconColor,
+                color: AppColors.textPrimary(context),
                 width: 34,
               ),
               onPressed: () => Navigator.pop(context),
@@ -139,33 +142,70 @@ class _RecommendationLoadingScreenState
   }
 
   Widget _buildLoadingContent(bool isDarkMode) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildAnimatedBrain(isDarkMode),
-          const SizedBox(height: 30),
-          Text(
-            _messages[_currentMessageIndex],
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontStyle: FontStyle.italic,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDarkMode
+              ? [
+            AppColors.myBlack,
+            AppColors.lightBlack.withOpacity(0.8),
+          ]
+              : [
+            AppColors.lightBackground,
+            AppColors.lightSurface.withOpacity(0.9),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildAnimatedBrain(isDarkMode),
+            const SizedBox(height: 30),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceColor(context).withOpacity(0.9),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadowColor(context),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Text(
+                _messages[_currentMessageIndex],
+                style: TextStyle(
+                  fontSize: 18,
+                  color: AppColors.textPrimary(context),
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 40),
-          SizedBox(
-            width: 300,
-            height: 100,
-            child: Lottie.asset(
-              'assets/animations/loader.json',
-              animate: true,
-              repeat: true,
-              frameRate: FrameRate(60),
+            const SizedBox(height: 40),
+            Container(
+              width: 300,
+              height: 100,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: AppColors.surfaceColor(context).withOpacity(0.5),
+              ),
+              child: Lottie.asset(
+                'assets/animations/loader.json',
+                animate: true,
+                repeat: true,
+                frameRate: FrameRate(60),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -177,36 +217,46 @@ class _RecommendationLoadingScreenState
         AnimatedContainer(
           duration: const Duration(seconds: 2),
           curve: Curves.easeInOut,
-          width: 180,
-          height: 180,
+          width: 200,
+          height: 200,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: (isDarkMode ? AppColors.darkBlue : AppColors.lightBlue)
-                .withOpacity(0.1),
+            gradient: RadialGradient(
+              colors: [
+                (isDarkMode ? AppColors.darkBlue : AppColors.lightBlue)
+                    .withOpacity(0.3),
+                (isDarkMode ? AppColors.lightBlue : AppColors.darkBlue)
+                    .withOpacity(0.1),
+              ],
+            ),
           ),
         ),
         RotationTransition(
           turns: _controller,
           child: Container(
-            width: 160,
-            height: 160,
+            width: 180,
+            height: 180,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
                 color: (isDarkMode ? AppColors.myWhite : AppColors.darkBlue)
-                    .withOpacity(0.3),
-                width: 1.5,
+                    .withOpacity(0.4),
+                width: 2,
               ),
             ),
           ),
         ),
-        SizedBox(
-          width: 120,
-          height: 120,
+        Container(
+          width: 140,
+          height: 140,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.surfaceColor(context).withOpacity(0.8),
+          ),
           child: ColorFiltered(
             colorFilter: ColorFilter.mode(
               (isDarkMode ? AppColors.myWhite : AppColors.darkBlue)
-                  .withOpacity(0.8),
+                  .withOpacity(0.9),
               BlendMode.srcIn,
             ),
             child: Lottie.asset(

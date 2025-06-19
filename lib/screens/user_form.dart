@@ -7,7 +7,6 @@ import '../Widgets/header.dart';
 import '../services/api_service.dart';
 import 'package:guidera_app/screens/recommendation_loading_screen.dart';
 
-
 /// Custom scroll behavior to remove the scrollbar.
 class NoScrollBehavior extends ScrollBehavior {
   @override
@@ -30,7 +29,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   final GlobalKey _personalityKey = GlobalKey();
   final ApiService _api = ApiService();
 
-  // Current section index: 0 = Personal, 1 = Academic, 2 = Personality.
+  // Current section index: 0 = Academic, 1 = Personality.
   int _currentSectionIndex = 0;
 
   // Main scroll controller.
@@ -61,7 +60,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   int? _p8;
 
   // Dummy question lists for slider (not displayed to user)
-
   final List<String> _academicQuestions =
   List.generate(10, (i) => "Academic Q${i + 1}");
   final List<String> _personalityQuestions =
@@ -69,7 +67,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   // Getter for current section's dummy questions.
   List<String> get _currentQuestions {
-    if (_currentSectionIndex == 1) return _academicQuestions;
+    if (_currentSectionIndex == 0) return _academicQuestions;
     return _personalityQuestions;
   }
 
@@ -128,7 +126,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       "Project Preference": _p8! + 1,
     };
 
-
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -144,7 +141,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     double minDistance = double.infinity;
     int newIndex = _currentSectionIndex;
 
-    List<GlobalKey> keys = [ _academicKey, _personalityKey];
+    List<GlobalKey> keys = [_academicKey, _personalityKey];
     for (int i = 0; i < keys.length; i++) {
       final context = keys[i].currentContext;
       if (context != null) {
@@ -178,12 +175,10 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     );
   }
 
-
   GlobalKey _getKeyForSection(int index) {
-    if (index == 1) return _academicKey;
+    if (index == 0) return _academicKey;
     return _personalityKey;
   }
-
 
   double get _academicProgress {
     int total = 1; // Only Study Stream remains.
@@ -320,7 +315,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           width: 100,
           height: 10,
           decoration: BoxDecoration(
-            color: AppColors.surfaceColor(context),
+            color: AppColors.borderColor(context),
             borderRadius: BorderRadius.circular(5),
           ),
           child: FractionallySizedBox(
@@ -341,36 +336,49 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   // Likert Question Helper.
   Widget _buildLikertQuestion(String question, int? currentValue,
       Function(int?) onChanged, List<String> options) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(question,
-            style: TextStyle(
-                color: AppColors.textPrimary(context),
-                fontSize: 16,
-                fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: List.generate(options.length, (index) {
-            return ChoiceChip(
-              label: Text(options[index],
-                  style: const TextStyle(fontSize: 12)),
-              selected: currentValue == index,
-              selectedColor: AppColors.lightBlue,
-              backgroundColor: AppColors.surfaceColor(context),
-              labelStyle: TextStyle(
-                color: currentValue == index
-                    ? AppColors.myWhite
-                    : AppColors.textPrimary(context),
-              ),
-              onSelected: (selected) {
-                onChanged(selected ? index : null);
-              },
-            );
-          }),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceColor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.borderColor(context),
+          width: 1,
         ),
-      ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(question,
+              style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(options.length, (index) {
+              return ChoiceChip(
+                label: Text(options[index],
+                    style: const TextStyle(fontSize: 12)),
+                selected: currentValue == index,
+                selectedColor: AppColors.lightBlue,
+                backgroundColor: AppColors.backgroundColor(context),
+                labelStyle: TextStyle(
+                  color: currentValue == index
+                      ? AppColors.myWhite
+                      : AppColors.textPrimary(context),
+                ),
+                onSelected: (selected) {
+                  onChanged(selected ? index : null);
+                },
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 
@@ -401,8 +409,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   }
 
   // ---------------- SECTION BUILDERS ----------------
-
-
 
   // Academic Section UI.
   Widget _buildAcademicSection() {
@@ -527,7 +533,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               },
               likertOptions,
             ),
-            const SizedBox(height: 16),
             _buildLikertQuestion(
               "I prefer tasks that require logical thinking and structured solutions.",
               _p2,
@@ -538,7 +543,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               },
               likertOptions,
             ),
-            const SizedBox(height: 16),
             _buildLikertQuestion(
               "I can explain complex topics to others in an engaging way.",
               _p3,
@@ -549,7 +553,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               },
               likertOptions,
             ),
-            const SizedBox(height: 16),
             _buildLikertQuestion(
               "I enjoy brainstorming innovative ideas to solve challenges.",
               _p4,
@@ -560,7 +563,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               },
               likertOptions,
             ),
-            const SizedBox(height: 16),
             _buildLikertQuestion(
               "I pay close attention to details to ensure accuracy in my work.",
               _p5,
@@ -571,7 +573,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               },
               likertOptions,
             ),
-            const SizedBox(height: 16),
             _buildLikertQuestion(
               "I feel fulfilled when helping others overcome challenges.",
               _p6,
@@ -582,14 +583,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               },
               likertOptions,
             ),
-            const SizedBox(height: 16),
             _buildLikertQuestion(
               "Which activity excites you the most?",
               _p7,
                   (val) => setState(() => _p7 = val),
               threeOption7,
             ),
-            const SizedBox(height: 16),
             _buildLikertQuestion(
               "Which type of project would you prefer?",
               _p8,
@@ -597,43 +596,46 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               threeOption8,
             ),
             const SizedBox(height: 36),
-            ElevatedButton(
-              onPressed: _isFormComplete ? _saveProfile : null,
-              style: ButtonStyle(
-                backgroundColor:
-                MaterialStateProperty.resolveWith<Color>(
-                      (Set<MaterialState> states) {
-                    if (states.contains(MaterialState.disabled))
-                      return AppColors.textSecondary(context);
-                    return AppColors.lightBlue; // Enabled color.
-                  },
-                ),
-                padding: MaterialStateProperty.all<EdgeInsets>(
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                ),
-                shape:
-                MaterialStateProperty.all<RoundedRectangleBorder>(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isFormComplete ? _saveProfile : null,
+                style: ButtonStyle(
+                  backgroundColor:
+                  MaterialStateProperty.resolveWith<Color>(
+                        (Set<MaterialState> states) {
+                      if (states.contains(MaterialState.disabled))
+                        return AppColors.textSecondary(context).withOpacity(0.5);
+                      return AppColors.lightBlue; // Enabled color.
+                    },
+                  ),
+                  padding: MaterialStateProperty.all<EdgeInsets>(
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  ),
+                  shape:
+                  MaterialStateProperty.all<RoundedRectangleBorder>(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  elevation:
+                  MaterialStateProperty.resolveWith<double>(
+                        (Set<MaterialState> states) {
+                      if (states.contains(MaterialState.disabled))
+                        return 0;
+                      return 4;
+                    },
                   ),
                 ),
-                elevation:
-                MaterialStateProperty.resolveWith<double>(
-                      (Set<MaterialState> states) {
-                    if (states.contains(MaterialState.disabled))
-                      return 0;
-                    return 4;
-                  },
-                ),
-              ),
-              child: Text(
-                "Proceed",
-                style: TextStyle(
-                  color: _isFormComplete
-                      ? AppColors.myWhite
-                      : AppColors.textSecondary(context),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                child: Text(
+                  "Proceed",
+                  style: TextStyle(
+                    color: _isFormComplete
+                        ? AppColors.myWhite
+                        : AppColors.textSecondary(context),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -646,6 +648,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       backgroundColor: AppColors.backgroundColor(context),
       appBar: PreferredSize(
@@ -669,12 +673,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       ),
       body: Stack(
         children: [
-          // Main scrollable content area with all three sections.
+          // Main scrollable content area with all sections.
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            bottom: 100, // Reserve space for the bottom container.
+            bottom: 120, // Reserve space for the bottom container.
             child: ScrollConfiguration(
               behavior: NoScrollBehavior(),
               child: SingleChildScrollView(
@@ -696,13 +700,23 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             bottom: 0,
             child: Container(
               padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 42),
+                  horizontal: 16, vertical: 32),
               decoration: BoxDecoration(
-                color: AppColors.surfaceColor(context),
-                borderRadius: BorderRadius.only(
+                color: isDarkMode
+                    ? AppColors.lightBlack
+                    : AppColors.lightSurface,
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.shadowColor(context),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -714,16 +728,16 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                     children: [
                       InkWell(
                         onTap: () =>
-                            _scrollToSection(_getKeyForSection(1)),
+                            _scrollToSection(_getKeyForSection(0)),
                         child: buildProgressColumn("Academic",
-                            _academicProgress, _currentSectionIndex == 1),
+                            _academicProgress, _currentSectionIndex == 0),
                       ),
                       InkWell(
                         onTap: () =>
-                            _scrollToSection(_getKeyForSection(2)),
+                            _scrollToSection(_getKeyForSection(1)),
                         child: buildProgressColumn("Personality",
                             _personalityProgress,
-                            _currentSectionIndex == 2),
+                            _currentSectionIndex == 1),
                       ),
                     ],
                   ),

@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  static const _baseUrl = 'http://192.168.0.110:3000/api';
+  static const _baseUrl = 'http://192.168.0.106:3000/api';
   final _storage = const FlutterSecureStorage();
 
   // ───────────────────────────────────────────────────────────────────
@@ -186,6 +186,11 @@ class ApiService {
     return get('/programs', auth: true);
   }
 
+  /// Fetch all universities with program counts
+  Future<http.Response> getAllUniversities() async {
+    return get('/universities', auth: true);
+  }
+
   /// Fuzzy search universities by name
   Future<http.Response> searchUniversities(String name) async {
     return get('/universities/search/$name', auth: true);
@@ -211,42 +216,48 @@ class ApiService {
     String? location,
     String? universityTitle,
     String? programTitle,
+    String? standardizedTitle,
     int? qsRanking,
     int? minTotalFee,
     int? maxTotalFee,
-    int? minCreditFee,
-    int? maxCreditFee,
   }) async {
     final params = <String, String>{};
     if (location != null) params['location'] = location;
     if (universityTitle != null) params['university_title'] = universityTitle;
     if (programTitle != null) params['program_title'] = programTitle;
+    if (standardizedTitle != null) params['standardized_title'] = standardizedTitle;
     if (qsRanking != null) params['qs_ranking'] = qsRanking.toString();
     if (minTotalFee != null) params['min_total_fee'] = minTotalFee.toString();
     if (maxTotalFee != null) params['max_total_fee'] = maxTotalFee.toString();
-    if (minCreditFee != null) params['min_credit_fee'] = minCreditFee.toString();
-    if (maxCreditFee != null) params['max_credit_fee'] = maxCreditFee.toString();
 
-    final uri = Uri.parse('$_baseUrl/programs/filter')
-        .replace(queryParameters: params);
+    final uri = Uri.parse('$_baseUrl/programs/filter').replace(queryParameters: params);
     final headers = <String, String>{};
     final token = await _storage.read(key: 'token');
     if (token != null) headers['Authorization'] = 'Bearer $token';
     return http.get(uri, headers: headers);
   }
 
-  /// Helper to extract unique university titles from programs list
-  Future<List<String>> getUniversityNames() async {
+  /// Get unique locations from database
+  Future<List<String>> getLocations() async {
     try {
-      final response = await getAllPrograms();
+      final response = await get('/locations', auth: true);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        return data
-            .map((p) => p['university_title']?.toString() ?? '')
-            .where((n) => n.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+        return data.map((location) => location.toString()).toList();
+      }
+    } catch (e) {
+      print('Error fetching locations: $e');
+    }
+    return [];
+  }
+
+  /// Get unique university names from database
+  Future<List<String>> getUniversityNames() async {
+    try {
+      final response = await get('/university-names', auth: true);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((name) => name.toString()).toList();
       }
     } catch (e) {
       print('Error fetching university names: $e');
@@ -254,40 +265,16 @@ class ApiService {
     return [];
   }
 
-  /// Helper to extract unique program titles from programs list
+  /// Get unique program names from database (standardized titles)
   Future<List<String>> getProgramNames() async {
     try {
-      final response = await getAllPrograms();
+      final response = await get('/program-names', auth: true);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        return data
-            .map((p) => p['program_title']?.toString() ?? '')
-            .where((n) => n.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
+        return data.map((name) => name.toString()).toList();
       }
     } catch (e) {
       print('Error fetching program names: $e');
-    }
-    return [];
-  }
-
-  /// Helper to extract unique locations from programs list
-  Future<List<String>> getLocations() async {
-    try {
-      final response = await getAllPrograms();
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        return data
-            .map((p) => p['location']?.toString() ?? '')
-            .where((n) => n.isNotEmpty)
-            .toSet()
-            .toList()
-          ..sort();
-      }
-    } catch (e) {
-      print('Error fetching locations: $e');
     }
     return [];
   }
