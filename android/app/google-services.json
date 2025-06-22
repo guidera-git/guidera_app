@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "721792987131",
+    "project_id": "guidera-backend",
+    "storage_bucket": "guidera-backend.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:721792987131:android:882da3ad0abde6902f655e",
+        "android_client_info": {
+          "package_name": "com.guidera.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFKAwgsTpxeP3p2o-JDoXiyf-4_Aq0vww"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

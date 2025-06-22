@@ -3,20 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:guidera_app/theme/app_colors.dart';
-import '../Widgets/drawer.dart';
-import '../Widgets/drawer.dart'; // Import the common drawer widget
+import 'package:guidera_app/widgets/header.dart';
+import '../widgets/drawer.dart';
 
-/// A screen that provides an overview of Guidera,
-/// introduces the team, and includes contact details.
 class AboutGuideraScreen extends StatelessWidget {
   AboutGuideraScreen({Key? key}) : super(key: key);
 
-  // Overview content.
   final String _overviewText = '''
 Guidera is an innovative platform designed to assist students in selecting and applying to universities. Our system streamlines the program and university selection process by offering personalized recommendations based on academic scores and personal preferences. With intuitive filtering and visually generated recommendations, Guidera helps you choose the right path.
   ''';
 
-  // Team data with provided avatar links.
   final List<Map<String, String>> _team = [
     {
       'name': 'Aaliyan',
@@ -47,10 +43,9 @@ Guidera is an innovative platform designed to assist students in selecting and a
     },
   ];
 
-  /// Builds a section card with a title and content.
-  Widget _buildSection({required String title, required Widget content}) {
+  Widget _buildSection({required String title, required Widget content, required BuildContext context}) {
     return Card(
-      color: AppColors.lightBlack,
+      color: AppColors.surfaceColor(context),
       margin: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -60,10 +55,10 @@ Guidera is an innovative platform designed to assist students in selecting and a
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.myWhite,
+                color: AppColors.textPrimary(context),
               ),
             ),
             const SizedBox(height: 8),
@@ -74,8 +69,7 @@ Guidera is an innovative platform designed to assist students in selecting and a
     );
   }
 
-  /// Builds a list tile representing a team member.
-  Widget _buildTeamMember(Map<String, String> member) {
+  Widget _buildTeamMember(Map<String, String> member, BuildContext context) {
     return ListTile(
       leading: CircleAvatar(
         backgroundImage: NetworkImage(member['imageUrl'] ?? ''),
@@ -83,8 +77,8 @@ Guidera is an innovative platform designed to assist students in selecting and a
       ),
       title: Text(
         member['name'] ?? '',
-        style: const TextStyle(
-          color: AppColors.myWhite,
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -93,12 +87,12 @@ Guidera is an innovative platform designed to assist students in selecting and a
         children: [
           Text(
             member['role'] ?? '',
-            style: const TextStyle(color: AppColors.myWhite),
+            style: TextStyle(color: AppColors.textSecondary(context)),
           ),
           const SizedBox(height: 4),
           Text(
             member['bio'] ?? '',
-            style: const TextStyle(color: AppColors.myWhite),
+            style: TextStyle(color: AppColors.textSecondary(context)),
           ),
         ],
       ),
@@ -109,47 +103,58 @@ Guidera is an innovative platform designed to assist students in selecting and a
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
-      // Use the common drawer and set selectedIndex to 1 for About Guidera.
+      backgroundColor: AppColors.backgroundColor(context),
       drawer: const GuideraDrawer(selectedIndex: 1),
-      appBar: AppBar(
-        backgroundColor: AppColors.myBlack,
-        elevation: 0,
-        // Use a menu icon to open the drawer (no back button).
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: SvgPicture.asset(
-              "assets/images/menu.svg",
-              color: AppColors.myWhite,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Stack(
+          children: [
+            const GuideraHeader(),
+            Positioned(
+              top: 70,
+              left: 10,
+              child: Builder(
+                builder: (context) => IconButton(
+                  icon: SvgPicture.asset(
+                    "assets/images/menu.svg",
+                    color: AppColors.textPrimary(context),
+                    height: 30,
+                  ),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
             ),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        title: const Text(
-          "About Guidera",
-          style: TextStyle(color: AppColors.myWhite),
+          ],
         ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Overview Section.
+            Text(
+              "About Guidera",
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+            const SizedBox(height: 20),
             _buildSection(
               title: "Overview",
               content: Text(
                 _overviewText,
-                style: const TextStyle(fontSize: 16, color: AppColors.myWhite),
+                style: TextStyle(fontSize: 16, color: AppColors.textPrimary(context)),
               ),
+              context: context,
             ),
-            // Team Section.
             _buildSection(
               title: "Our Team",
               content: Column(
-                children: _team.map((member) => _buildTeamMember(member)).toList(),
+                children: _team.map((member) => _buildTeamMember(member, context)).toList(),
               ),
+              context: context,
             ),
-            // Contact Section with copy-to-clipboard functionality.
             _buildSection(
               title: "Contact Us",
               content: Column(
@@ -194,12 +199,13 @@ Guidera is an innovative platform designed to assist students in selecting and a
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     "Made with passion by UCP students as Final Year Project.",
-                    style: TextStyle(fontSize: 16, color: AppColors.myWhite),
+                    style: TextStyle(fontSize: 16, color: AppColors.textPrimary(context)),
                   ),
                 ],
               ),
+              context: context,
             ),
           ],
         ),

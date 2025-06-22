@@ -3,10 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
-import 'package:guidera_app/widgets/fancy_bottom_nav_bar.dart';
-import 'package:guidera_app/widgets/fancy_nav_item.dart';
 import 'package:guidera_app/models/program.dart';
-import 'SavedUniversitiesScreen.dart';
+import 'package:guidera_app/services/saved_programs_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -21,9 +19,11 @@ class UniversityInformation extends StatefulWidget {
 
 class _UniversityInformationState extends State<UniversityInformation> {
   int selectedIndex = 0;
-  int _navIndex = 0;
-  bool isSaved = false; // Track save state
-  final Map<String, bool> _expandedTexts = {}; // Track expanded state for long texts
+  bool isSaved = false;
+  bool _isCheckingSaved = true;
+  bool _isSaving = false;
+  final Map<String, bool> _expandedTexts = {};
+  final SavedProgramsService _savedProgramsService = SavedProgramsService();
 
   final List<String> chipLabels = [
     'Overview',
@@ -33,6 +33,26 @@ class _UniversityInformationState extends State<UniversityInformation> {
     'Fee',
     'About University',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfSaved();
+  }
+
+  Future<void> _checkIfSaved() async {
+    try {
+      final saved = await _savedProgramsService.isProgramSaved(widget.program.id);
+      setState(() {
+        isSaved = saved;
+        _isCheckingSaved = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isCheckingSaved = false;
+      });
+    }
+  }
 
   List<Color> _getRowColors(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -49,20 +69,59 @@ class _UniversityInformationState extends State<UniversityInformation> {
     }
   }
 
-  void _toggleSave() {
+  void _toggleSave() async {
+    if (_isSaving) return;
+
     setState(() {
-      isSaved = !isSaved; // Toggle save state
+      _isSaving = true;
     });
 
-    // Show toast message
-    Fluttertoast.showToast(
-      msg: isSaved ? "Data is saved" : "Data is unsaved",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-      backgroundColor: AppColors.darkBlue,
-      textColor: AppColors.myWhite,
-      fontSize: 16.0,
-    );
+    try {
+      if (isSaved) {
+        final savedPrograms = await _savedProgramsService.getSavedPrograms();
+        final savedProgram = savedPrograms.firstWhere(
+              (sp) => sp.programId == widget.program.id,
+          orElse: () => throw Exception('Saved program not found'),
+        );
+
+        final success = await _savedProgramsService.unsaveProgram(savedProgram.savedId);
+        if (success) {
+          setState(() {
+            isSaved = false;
+          });
+          Fluttertoast.showToast(
+            msg: "Program removed from saved",
+            backgroundColor: AppColors.darkBlue,
+            textColor: AppColors.myWhite,
+          );
+        }
+      } else {
+        final success = await _savedProgramsService.saveProgram(
+          widget.program.id,
+          widget.program.universityId,
+        );
+        if (success) {
+          setState(() {
+            isSaved = true;
+          });
+          Fluttertoast.showToast(
+            msg: "Program saved successfully",
+            backgroundColor: AppColors.darkBlue,
+            textColor: AppColors.myWhite,
+          );
+        }
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: e.toString().replaceAll('Exception: ', ''),
+        backgroundColor: Colors.red,
+        textColor: AppColors.myWhite,
+      );
+    } finally {
+      setState(() {
+        _isSaving = false;
+      });
+    }
   }
 
   List<Map<String, String>> _generateOverviewItems() {
@@ -100,12 +159,10 @@ class _UniversityInformationState extends State<UniversityInformation> {
       requirements['Requirement ${i + 1}'] = criteria[i].criteria;
     }
 
-    // Add merit information if available
     if (widget.program.merit != null) {
       requirements['Merit Information'] = widget.program.merit.toString();
     }
 
-    // Add merit formula if available
     if (widget.program.meritFormula != null && widget.program.meritFormula!.isNotEmpty) {
       requirements['Merit Formula'] = widget.program.meritFormula!.join(', ');
     }
@@ -154,7 +211,6 @@ class _UniversityInformationState extends State<UniversityInformation> {
   }
 
   List<Map<String, String>> _generateUniversityInfo() {
-    // Format campuses properly
     String formattedCampuses = 'N/A';
     if (widget.program.campuses != null) {
       try {
@@ -167,7 +223,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
           }
         } else {
           formattedCampuses = widget.program.campuses.toString()
-              .replaceAll(RegExp(r'[{}"[\]]'), '')
+              .replaceAll(RegExp(r'[{}"[]]'), '')
               .replaceAll(',', '\n• ');
           if (formattedCampuses.isNotEmpty) {
             formattedCampuses = '• $formattedCampuses';
@@ -198,16 +254,14 @@ class _UniversityInformationState extends State<UniversityInformation> {
 
   void _shareApp(BuildContext context) {
     String shareText = "Check out this university: ${widget.program.universityTitle}\n"
-        "Program: ${widget.program.displayTitle}\n" // Use displayTitle
+        "Program: ${widget.program.displayTitle}\n"
         "Location: ${widget.program.location}\n"
         "Fee: ${widget.program.formattedTotalFee}";
 
-    // Add additional locations if available
     if (widget.program.additionalLocations != null && widget.program.additionalLocations!.isNotEmpty) {
       shareText += "\nAdditional Locations: ${widget.program.additionalLocations!.join(', ')}";
     }
 
-    // Add QS ranking if available
     if (widget.program.qsRanking != null) {
       shareText += "\nQS Ranking: ${widget.program.qsRanking}";
     }
@@ -240,14 +294,11 @@ class _UniversityInformationState extends State<UniversityInformation> {
   }
 
   Widget _buildMapConsentCard() {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     return Card(
       margin: const EdgeInsets.all(16),
       color: AppColors.surfaceColor(context),
       child: Stack(
         children: [
-          // Background Image
           Positioned.fill(
             child: Opacity(
               opacity: 0.5,
@@ -257,13 +308,12 @@ class _UniversityInformationState extends State<UniversityInformation> {
               ),
             ),
           ),
-          // Content
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
                 Text(
-                  "To activate the map, click on the \"Show map\" button. We would like to point out that data will be transmitted to Google Maps after activation. You can find out more in our privacy policy. You can revoke your consent to the transmission of data at any time.",
+                  "To activate the map, click on the Show map button. We would like to point out that data will be transmitted to Google Maps after activation. You can find out more in our privacy policy. You can revoke your consent to the transmission of data at any time",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textPrimary(context),
@@ -393,7 +443,6 @@ class _UniversityInformationState extends State<UniversityInformation> {
     );
   }
 
-  /// Launches the given URL in the default browser.
   void _launchURL(String url) async {
     if (url == 'N/A') return;
 
@@ -525,43 +574,55 @@ class _UniversityInformationState extends State<UniversityInformation> {
               const GuideraHeader(),
               Padding(
                 padding: const EdgeInsets.only(top: 3.0, left: 20.0, right: 20.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        widget.program.displayTitle,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: "ProductSans",
-                          color: AppColors.textPrimary(context),
-                          height: 1.2,
-                        ),
-                        maxLines: 3,
-                        softWrap: true,
-                        overflow: TextOverflow.visible,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: _toggleSave,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        transitionBuilder: (Widget child, Animation<double> animation) {
-                          return ScaleTransition(scale: animation, child: child);
-                        },
-                        child: SvgPicture.asset(
-                          isSaved ? "assets/images/filledsave.svg" : "assets/images/save.svg",
-                          key: ValueKey<bool>(isSaved),
-                          height: 32,
-                          colorFilter: ColorFilter.mode(
-                            AppColors.textPrimary(context),
-                            BlendMode.srcIn,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.program.displayTitle,
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: "ProductSans",
+                              color: AppColors.textPrimary(context),
+                              height: 1.2,
+                            ),
+                            maxLines: 3,
+                            softWrap: true,
+                            overflow: TextOverflow.visible,
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: _isSaving ? null : _toggleSave,
+                          child: _isSaving
+                              ? SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.lightBlue,
+                            ),
+                          )
+                              : AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder: (Widget child, Animation<double> animation) {
+                              return ScaleTransition(scale: animation, child: child);
+                            },
+                            child: SvgPicture.asset(
+                              isSaved ? "assets/images/filledsave.svg" : "assets/images/save.svg",
+                              key: ValueKey<bool>(isSaved),
+                              height: 32,
+                              colorFilter: ColorFilter.mode(
+                                AppColors.textPrimary(context),
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -609,7 +670,6 @@ class _UniversityInformationState extends State<UniversityInformation> {
                         ),
                       ],
                     ),
-                    // Show additional locations if available
                     if (widget.program.additionalLocations != null && widget.program.additionalLocations!.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
@@ -625,7 +685,6 @@ class _UniversityInformationState extends State<UniversityInformation> {
                     const SizedBox(height: 18),
                     Row(
                       children: [
-                        // Share Icon
                         GestureDetector(
                           onTap: () {
                             _shareApp(context);
@@ -640,7 +699,6 @@ class _UniversityInformationState extends State<UniversityInformation> {
                           ),
                         ),
                         const SizedBox(width: 14),
-                        // Map Icon
                         GestureDetector(
                           onTap: () {
                             _showMapBottomSheet(context);
@@ -654,7 +712,6 @@ class _UniversityInformationState extends State<UniversityInformation> {
                             ),
                           ),
                         ),
-                        // Show QS ranking if available
                         if (widget.program.qsRanking != null) ...[
                           const SizedBox(width: 14),
                           Container(

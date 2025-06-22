@@ -1,4 +1,4 @@
-package com.example.demo
+package com.guidera.app
 
 import io.flutter.embedding.android.FlutterActivity
 

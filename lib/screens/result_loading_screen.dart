@@ -115,7 +115,9 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
     final iconColor = isDarkMode ? AppColors.myWhite : AppColors.myBlack;
 
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.myBlack
+          : AppColors.myWhite,
       body: Stack(
         children: [
           Column(

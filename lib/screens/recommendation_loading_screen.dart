@@ -7,7 +7,6 @@ import '../Widgets/header.dart';
 import '../theme/app_colors.dart';
 import '../services/api_service.dart';
 import 'recommendation_results_screen.dart';
-import '../models/user_profile.dart'; // we'll parse into this model
 
 class RecommendationLoadingScreen extends StatefulWidget {
   final Map<String, dynamic> payload;
@@ -115,7 +114,9 @@ class _RecommendationLoadingScreenState
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundColor(context),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.myBlack
+          : AppColors.myWhite,
       body: Stack(
         children: [
           Column(
@@ -153,7 +154,7 @@ class _RecommendationLoadingScreenState
             AppColors.lightBlack.withOpacity(0.8),
           ]
               : [
-            AppColors.lightBackground,
+            AppColors.myWhite,
             AppColors.lightSurface.withOpacity(0.9),
           ],
         ),
@@ -195,7 +196,6 @@ class _RecommendationLoadingScreenState
               height: 100,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                color: AppColors.surfaceColor(context).withOpacity(0.5),
               ),
               child: Lottie.asset(
                 'assets/animations/loader.json',

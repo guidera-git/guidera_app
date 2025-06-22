@@ -3,23 +3,18 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:guidera_app/theme/app_colors.dart';
-import '../Widgets/drawer.dart';
+import 'package:guidera_app/widgets/header.dart';
+import '../widgets/drawer.dart';
 
-/// A screen that merges:
-/// 1) A star rating bottom sheet (Rate App).
-/// 2) A minimal share sheet (Share App) via share_plus.
-/// 3) Social icons with original brand colors and fallback URLs.
 class RateShareSocialScreen extends StatelessWidget {
   const RateShareSocialScreen({Key? key}) : super(key: key);
 
-  // Dummy Play Store link for the app.
   final String _dummyPlayStoreLink =
       "https://play.google.com/store/apps/details?id=com.guidera.app";
 
-  /// Builds a simple card with a title and content.
-  Widget _buildCard({required String title, required Widget child}) {
+  Widget _buildCard({required String title, required Widget child, required BuildContext context}) {
     return Card(
-      color: AppColors.lightBlack,
+      color: AppColors.surfaceColor(context),
       margin: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -29,10 +24,10 @@ class RateShareSocialScreen extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.myWhite,
+                color: AppColors.textPrimary(context),
               ),
             ),
             const SizedBox(height: 12),
@@ -43,25 +38,21 @@ class RateShareSocialScreen extends StatelessWidget {
     );
   }
 
-  /// Opens the star rating bottom sheet.
   void _showRatingBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.myBlack,
+      backgroundColor: AppColors.surfaceColor(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => const _RatingBottomSheet(),
+      builder: (context) => _RatingBottomSheet(),
     );
   }
 
-  /// Uses share_plus to open the system share sheet.
   void _shareApp(BuildContext context) {
-    // This text gets shared to WhatsApp, Messages, Gmail, etc.
     Share.share("Check out Guidera! $_dummyPlayStoreLink");
   }
 
-  /// Builds the Rate & Share card with two ListTiles.
   Widget _buildRateShareCard(BuildContext context) {
     return _buildCard(
       title: "Rate & Share",
@@ -69,33 +60,33 @@ class RateShareSocialScreen extends StatelessWidget {
         children: [
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.star_rate, color: AppColors.myWhite),
-            title: const Text(
+            leading: Icon(Icons.star_rate, color: AppColors.textPrimary(context)),
+            title: Text(
               "Rate App",
-              style: TextStyle(color: AppColors.myWhite),
+              style: TextStyle(color: AppColors.textPrimary(context)),
             ),
-            trailing: const Icon(Icons.arrow_forward_ios,
-                color: AppColors.myWhite, size: 16),
+            trailing: Icon(Icons.arrow_forward_ios,
+                color: AppColors.textPrimary(context), size: 16),
             onTap: () => _showRatingBottomSheet(context),
           ),
-          const Divider(color: AppColors.myGray),
+          Divider(color: AppColors.borderColor(context)),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.share, color: AppColors.myWhite),
-            title: const Text(
+            leading: Icon(Icons.share, color: AppColors.textPrimary(context)),
+            title: Text(
               "Share App",
-              style: TextStyle(color: AppColors.myWhite),
+              style: TextStyle(color: AppColors.textPrimary(context)),
             ),
-            trailing: const Icon(Icons.arrow_forward_ios,
-                color: AppColors.myWhite, size: 16),
+            trailing: Icon(Icons.arrow_forward_ios,
+                color: AppColors.textPrimary(context), size: 16),
             onTap: () => _shareApp(context),
           ),
         ],
       ),
+      context: context,
     );
   }
 
-  /// Attempts to open the respective social app if installed; otherwise opens fallback URL.
   Future<void> _openSocialApp({
     required String appUrlScheme,
     required String fallbackUrl,
@@ -110,14 +101,12 @@ class RateShareSocialScreen extends StatelessWidget {
     }
   }
 
-  /// Builds the Follow Us card with brand-colored social icons (no color override).
-  Widget _buildFollowUsCard() {
+  Widget _buildFollowUsCard(BuildContext context) {
     return _buildCard(
       title: "Follow Us",
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          // Facebook
           InkWell(
             onTap: () => _openSocialApp(
               appUrlScheme: "fb://page/guidera",
@@ -129,7 +118,6 @@ class RateShareSocialScreen extends StatelessWidget {
               width: 40,
             ),
           ),
-          // Instagram
           InkWell(
             onTap: () => _openSocialApp(
               appUrlScheme: "instagram://user?username=guidera",
@@ -141,7 +129,6 @@ class RateShareSocialScreen extends StatelessWidget {
               width: 40,
             ),
           ),
-          // Twitter
           InkWell(
             onTap: () => _openSocialApp(
               appUrlScheme: "twitter://user?screen_name=guidera",
@@ -153,7 +140,6 @@ class RateShareSocialScreen extends StatelessWidget {
               width: 40,
             ),
           ),
-          // LinkedIn
           InkWell(
             onTap: () => _openSocialApp(
               appUrlScheme: "linkedin://company/guidera",
@@ -167,36 +153,52 @@ class RateShareSocialScreen extends StatelessWidget {
           ),
         ],
       ),
+      context: context,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
-      // Use the common drawer with selected index 5.
+      backgroundColor: AppColors.backgroundColor(context),
       drawer: const GuideraDrawer(selectedIndex: 5),
-      appBar: AppBar(
-        backgroundColor: AppColors.myBlack,
-        elevation: 0,
-        // Menu icon to open the drawer.
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: AppColors.myWhite),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        title: const Text(
-          "Rate & Share / Social",
-          style: TextStyle(color: AppColors.myWhite),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Stack(
+          children: [
+            const GuideraHeader(),
+            Positioned(
+              top: 70,
+              left: 10,
+              child: Builder(
+                builder: (context) => IconButton(
+                  icon: SvgPicture.asset(
+                    "assets/images/menu.svg",
+                    color: AppColors.textPrimary(context),
+                    height: 30,
+                  ),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            Text(
+              "Rate & Share / Social",
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+            const SizedBox(height: 20),
             _buildRateShareCard(context),
-            _buildFollowUsCard(),
+            _buildFollowUsCard(context),
           ],
         ),
       ),
@@ -204,10 +206,7 @@ class RateShareSocialScreen extends StatelessWidget {
   }
 }
 
-/// Private bottom sheet widget for rating the app with stars.
 class _RatingBottomSheet extends StatefulWidget {
-  const _RatingBottomSheet();
-
   @override
   State<_RatingBottomSheet> createState() => __RatingBottomSheetState();
 }
@@ -237,12 +236,12 @@ class __RatingBottomSheetState extends State<_RatingBottomSheet> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          const Text(
+          Text(
             "Rate Guidera",
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: AppColors.myWhite,
+              color: AppColors.textPrimary(context),
             ),
           ),
           const SizedBox(height: 16),
@@ -256,7 +255,6 @@ class __RatingBottomSheetState extends State<_RatingBottomSheet> {
               backgroundColor: AppColors.lightBlue,
             ),
             onPressed: () {
-              // Handle rating submission logic here.
               Navigator.pop(context);
             },
             child: const Text("Submit Rating"),

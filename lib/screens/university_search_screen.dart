@@ -11,8 +11,10 @@ import 'package:guidera_app/screens/university_information.dart';
 import 'package:guidera_app/screens/user_form.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/services/api_service.dart';
+import 'package:guidera_app/services/saved_programs_service.dart';
 import 'package:guidera_app/services/search_history_service.dart';
 import 'package:guidera_app/models/filter_options.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'home_screen.dart';
 
 class UniversitySearchScreen extends StatefulWidget {
@@ -27,6 +29,8 @@ class UniversitySearchScreen extends StatefulWidget {
 class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   // Track selected programs by their id for comparison
   final Set<String> _selectedForComparison = {};
+  // Track saved programs by their id
+  final Set<String> _savedPrograms = {};
   List<Program> _programs = [];
   List<Program> _filteredPrograms = [];
   List<String> _searchHistory = [];
@@ -37,6 +41,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   FilterOptions _currentFilters = FilterOptions();
   final ApiService _apiService = ApiService();
+  final SavedProgramsService _savedProgramsService = SavedProgramsService();
 
   // Initial offset for the draggable compare button
   Offset _compareButtonOffset = const Offset(20, 500);
@@ -49,6 +54,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     }
     _loadPrograms();
     _loadSearchHistory();
+    _loadSavedPrograms();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -82,6 +88,66 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     _loadSearchHistory();
   }
 
+  Future<void> _loadSavedPrograms() async {
+    try {
+      final savedPrograms = await _savedProgramsService.getSavedPrograms();
+      setState(() {
+        _savedPrograms.clear();
+        _savedPrograms.addAll(savedPrograms.map((sp) => sp.programId));
+      });
+    } catch (e) {
+      print('Error loading saved programs: $e');
+    }
+  }
+
+  Future<void> _toggleSaveProgram(Program program) async {
+    try {
+      final isSaved = _savedPrograms.contains(program.id);
+
+      if (isSaved) {
+        // Find the saved program to get the saved_id
+        final savedPrograms = await _savedProgramsService.getSavedPrograms();
+        final savedProgram = savedPrograms.firstWhere(
+              (sp) => sp.programId == program.id,
+          orElse: () => throw Exception('Saved program not found'),
+        );
+
+        final success = await _savedProgramsService.unsaveProgram(savedProgram.savedId);
+        if (success) {
+          setState(() {
+            _savedPrograms.remove(program.id);
+          });
+          Fluttertoast.showToast(
+            msg: "Program removed from saved",
+            backgroundColor: AppColors.darkBlue,
+            textColor: AppColors.myWhite,
+          );
+        }
+      } else {
+        final success = await _savedProgramsService.saveProgram(
+          program.id,
+          program.universityId,
+        );
+        if (success) {
+          setState(() {
+            _savedPrograms.add(program.id);
+          });
+          Fluttertoast.showToast(
+            msg: "Program saved successfully",
+            backgroundColor: AppColors.darkBlue,
+            textColor: AppColors.myWhite,
+          );
+        }
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: e.toString().replaceAll('Exception: ', ''),
+        backgroundColor: Colors.red,
+        textColor: AppColors.myWhite,
+      );
+    }
+  }
+
   Future<void> _loadPrograms() async {
     setState(() {
       _isLoading = true;
@@ -101,11 +167,8 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
             : null,
       );
 
-      print('API returned: ${response.body}');
-
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
-        print('decoded.runtimeType = ${decoded.runtimeType}');
 
         if (decoded is List) {
           setState(() {
@@ -268,6 +331,19 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
         child: Stack(
           children: [
             const GuideraHeader(),
+            // Back button positioned at top left
+            Positioned(
+              top: 45,
+              left: 16,
+              child: IconButton(
+                icon: SvgPicture.asset(
+                  'assets/images/back.svg',
+                  width: 30,
+                  color: AppColors.textPrimary(context),
+                ),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            ),
           ],
         ),
       ),
@@ -319,113 +395,90 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     return Container(
       color: AppColors.backgroundColor(context),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          IconButton(
-            icon: SvgPicture.asset(
-              'assets/images/back.svg',
-              width: 30,
-              color: AppColors.textPrimary(context),
+      child: Container(
+        height: 45,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceColor(context),
+          borderRadius: BorderRadius.circular(70),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadowColor(context),
+              blurRadius: 4,
+              spreadRadius: 1,
             ),
-            onPressed: () => Navigator.of(context).maybePop(),
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Container(
-              height: 45,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceColor(context),
-                borderRadius: BorderRadius.circular(70),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.shadowColor(context),
-                    blurRadius: 4,
-                    spreadRadius: 1,
-                  ),
-                ],
+          ],
+        ),
+        child: Stack(
+          alignment: Alignment.centerLeft,
+          children: [
+            TextField(
+              controller: _searchController,
+              textAlign: TextAlign.start,
+              textAlignVertical: TextAlignVertical.center,
+              style: TextStyle(color: AppColors.textPrimary(context)),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                fillColor: Colors.black,
+                contentPadding: const EdgeInsets.only(
+                  left: 15,
+                  top: 4,
+                  bottom: 8,
+                  right: 70,
+                ),
+                hintText: 'Search programs or universities...',
+                hintStyle: TextStyle(
+                  fontFamily: 'Product Sans',
+                  fontWeight: FontWeight.normal,
+                  color: AppColors.textSecondary(context),
+                  fontSize: 15,
+                ),
               ),
-              child: Stack(
-                alignment: Alignment.centerLeft,
+              onSubmitted: (value) {
+                if (value.trim().isNotEmpty && value.trim().length >= 3) {
+                  _addToSearchHistory(value.trim());
+                  _performSearch();
+                }
+              },
+            ),
+            Positioned(
+              right: 0,
+              child: Row(
                 children: [
-                  TextField(
-                    controller: _searchController,
-                    textAlign: TextAlign.start,
-                    textAlignVertical: TextAlignVertical.center,
-                    style: TextStyle(color: AppColors.textPrimary(context)),
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      fillColor: Colors.black,
-                      contentPadding: const EdgeInsets.only(
-                        left: 15,
-                        top: 4,
-                        bottom: 8,
-                        right: 70,
-                      ),
-                      hintText: 'Search programs or universities...',
-                      hintStyle: TextStyle(
-                        fontFamily: 'Product Sans',
-                        fontWeight: FontWeight.normal,
-                        color: AppColors.textSecondary(context),
-                        fontSize: 15,
-                      ),
+                  IconButton(
+                    icon: SvgPicture.asset(
+                      'assets/images/filter.svg',
+                      width: 20,
+                      color: AppColors.lightBlue,
                     ),
-                    onSubmitted: (value) {
-                      if (value.trim().isNotEmpty && value.trim().length >= 3) {
-                        _addToSearchHistory(value.trim());
-                        _performSearch();
-                      }
-                    },
+                    onPressed: _showFilters,
                   ),
-                  Positioned(
-                    right: 0,
-                    child: Row(
-                      children: [
-                        Container(
-                          height: 35,
-                          margin: const EdgeInsets.only(right: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.lightBlue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: IconButton(
-                            icon: SvgPicture.asset(
-                              'assets/images/filter.svg',
-                              width: 20,
-                              color: AppColors.lightBlue,
-                            ),
-                            onPressed: _showFilters,
-                          ),
-                        ),
-                        Container(
-                          height: 35,
-                          margin: const EdgeInsets.only(right: 14),
-                          decoration: BoxDecoration(
-                            color: AppColors.lightBlue,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: IconButton(
-                            icon: SvgPicture.asset(
-                              'assets/images/send.svg',
-                              width: 20,
-                              color: AppColors.myWhite,
-                            ),
-                            onPressed: () {
-                              final query = _searchController.text.trim();
-                              if (query.isNotEmpty) {
-                                _addToSearchHistory(query);
-                              }
-                              _performSearch();
-                            },
-                          ),
-                        ),
-                      ],
+                  Container(
+                    height: 35,
+                    margin: const EdgeInsets.only(right: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.lightBlue,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: IconButton(
+                      icon: SvgPicture.asset(
+                        'assets/images/send.svg',
+                        width: 20,
+                        color: AppColors.myWhite,
+                      ),
+                      onPressed: () {
+                        final query = _searchController.text.trim();
+                        if (query.isNotEmpty) {
+                          _addToSearchHistory(query);
+                        }
+                        _performSearch();
+                      },
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -592,10 +645,12 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                         (context, index) {
                       final program = _filteredPrograms[index];
                       final isSelected = _selectedForComparison.contains(program.id);
+                      final isSaved = _savedPrograms.contains(program.id);
                       return _buildProgramCard(
                         context,
                         program: program,
                         isSelected: isSelected,
+                        isSaved: isSaved,
                         onCompareToggle: () {
                           setState(() {
                             if (isSelected) {
@@ -605,6 +660,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                             }
                           });
                         },
+                        onSaveToggle: () => _toggleSaveProgram(program),
                       );
                     },
                     childCount: _filteredPrograms.length,
@@ -701,12 +757,14 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     );
   }
 
-  // Program card with compare toggle
+  // Program card with compare toggle and save toggle (removed start application)
   Widget _buildProgramCard(
       BuildContext context, {
         required Program program,
         required bool isSelected,
+        required bool isSaved,
         required VoidCallback onCompareToggle,
+        required VoidCallback onSaveToggle,
       }) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -762,6 +820,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary(context),
                           ),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
@@ -773,40 +832,44 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                             fontWeight: FontWeight.w600,
                             color: AppColors.lightBlue,
                           ),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  Row(
-                    children: [
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => SavedProgramsScreen()),
-                          );
-                        },
-                        icon: SvgPicture.asset(
-                          'assets/images/save.svg',
-                          width: 22,
-                          color: AppColors.textPrimary(context),
+                  const SizedBox(width: 8),
+                  // Icons positioned at top right
+                  Container(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: onSaveToggle,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            child: SvgPicture.asset(
+                              isSaved ? 'assets/images/filledsave.svg' : 'assets/images/save.svg',
+                              width: 20,
+                              height: 20,
+                              color: isSaved ? AppColors.lightBlue : AppColors.textPrimary(context),
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: onCompareToggle,
-                        icon: SvgPicture.asset(
-                          'assets/images/compare.svg',
-                          width: 22,
-                          color: isSelected ? AppColors.lightBlue : AppColors.textPrimary(context),
+                        GestureDetector(
+                          onTap: onCompareToggle,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            child: SvgPicture.asset(
+                              'assets/images/compare.svg',
+                              width: 20,
+                              height: 20,
+                              color: isSelected ? AppColors.lightBlue : AppColors.textPrimary(context),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -852,15 +915,18 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                                     color: Colors.red,
                                     size: 16,
                                   ),
-                                  Text(
-                                    program.location,
-                                    style: TextStyle(
-                                      fontFamily: 'Product Sans',
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary(context),
-                                      fontSize: 14,
+                                  const SizedBox(width: 2),
+                                  Expanded(
+                                    child: Text(
+                                      program.location,
+                                      style: TextStyle(
+                                        fontFamily: 'Product Sans',
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary(context),
+                                        fontSize: 14,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),

@@ -1,9 +1,10 @@
-// fancy_nav_item.dart
+// lib/widgets/fancy_nav_item.dart
+
 class FancyNavItem {
   final String label;
   final String svgPath;
 
-  FancyNavItem({
+  const FancyNavItem({
     required this.label,
     required this.svgPath,
   });

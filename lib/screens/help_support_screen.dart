@@ -3,16 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:guidera_app/theme/app_colors.dart';
-import '../Widgets/drawer.dart';
+import 'package:guidera_app/widgets/header.dart';
+import '../widgets/drawer.dart';
 
-
-/// A screen for Help & Support that includes FAQs and a Contact section.
-/// The Contact section uses an email container that copies the email to the clipboard
-/// and shows a toast notification.
 class HelpSupportScreen extends StatelessWidget {
   const HelpSupportScreen({Key? key}) : super(key: key);
 
-  // Sample FAQs – update these with your actual FAQs.
   final List<Map<String, String>> _faqs = const [
     {
       'question': 'How do I reset my password?',
@@ -30,10 +26,9 @@ class HelpSupportScreen extends StatelessWidget {
     },
   ];
 
-  /// Builds a section card with a title and content.
-  Widget _buildSection({required String title, required Widget content}) {
+  Widget _buildSection({required String title, required Widget content, required BuildContext context}) {
     return Card(
-      color: AppColors.lightBlack,
+      color: AppColors.surfaceColor(context),
       margin: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -43,10 +38,10 @@ class HelpSupportScreen extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.myWhite,
+                color: AppColors.textPrimary(context),
               ),
             ),
             const SizedBox(height: 8),
@@ -57,19 +52,18 @@ class HelpSupportScreen extends StatelessWidget {
     );
   }
 
-  /// Builds the FAQ list.
-  Widget _buildFAQSection() {
+  Widget _buildFAQSection(BuildContext context) {
     return Column(
       children: _faqs.map((faq) {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: ExpansionTile(
-            backgroundColor: AppColors.lightBlack,
-            collapsedBackgroundColor: AppColors.lightBlack,
+            backgroundColor: AppColors.surfaceColor(context),
+            collapsedBackgroundColor: AppColors.surfaceColor(context),
             title: Text(
               faq['question']!,
-              style: const TextStyle(
-                color: AppColors.myWhite,
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -78,7 +72,7 @@ class HelpSupportScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
                   faq['answer']!,
-                  style: const TextStyle(color: AppColors.myWhite),
+                  style: TextStyle(color: AppColors.textPrimary(context)),
                 ),
               ),
             ],
@@ -88,7 +82,6 @@ class HelpSupportScreen extends StatelessWidget {
     );
   }
 
-  /// Builds the Contact section with a copy-to-clipboard email.
   Widget _buildContactSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,9 +125,9 @@ class HelpSupportScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           "For further assistance, please contact us via email.",
-          style: TextStyle(fontSize: 16, color: AppColors.myWhite),
+          style: TextStyle(fontSize: 16, color: AppColors.textPrimary(context)),
         ),
       ],
     );
@@ -143,39 +136,52 @@ class HelpSupportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
-      drawer: const GuideraDrawer(selectedIndex: 4), // Selected index for Help & Support.
-      appBar: AppBar(
-        backgroundColor: AppColors.myBlack,
-        elevation: 0,
-        // Menu icon to open the drawer.
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: SvgPicture.asset(
-              "assets/images/menu.svg",
-              color: AppColors.myWhite,
+      backgroundColor: AppColors.backgroundColor(context),
+      drawer: const GuideraDrawer(selectedIndex: 4),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(120),
+        child: Stack(
+          children: [
+            const GuideraHeader(),
+            Positioned(
+              top: 70,
+              left: 10,
+              child: Builder(
+                builder: (context) => IconButton(
+                  icon: SvgPicture.asset(
+                    "assets/images/menu.svg",
+                    color: AppColors.textPrimary(context),
+                    height: 30,
+                  ),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
             ),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        title: const Text(
-          "Help & Support",
-          style: TextStyle(color: AppColors.myWhite),
+          ],
         ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // FAQ Section.
+            Text(
+              "Help & Support",
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary(context),
+              ),
+            ),
+            const SizedBox(height: 20),
             _buildSection(
               title: "FAQs",
-              content: _buildFAQSection(),
+              content: _buildFAQSection(context),
+              context: context,
             ),
-            // Contact Section.
             _buildSection(
               title: "Contact Us",
               content: _buildContactSection(context),
+              context: context,
             ),
           ],
         ),

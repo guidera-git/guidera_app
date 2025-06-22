@@ -1,446 +1,167 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
-import 'package:guidera_app/screens/application_screen.dart';
-import 'package:guidera_app/screens/saved_programs_screen.dart';
+import 'package:guidera_app/services/application_service.dart';
+import 'package:guidera_app/services/api_service.dart';
+import 'package:guidera_app/screens/applications_screen.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'dart:convert';
 
-class AnalyticsTrackingScreen extends StatefulWidget {
-  const AnalyticsTrackingScreen({Key? key}) : super(key: key);
+class AnalyticsScreen extends StatefulWidget {
+  const AnalyticsScreen({Key? key}) : super(key: key);
 
   @override
-  State<AnalyticsTrackingScreen> createState() =>
-      _AnalyticsTrackingScreenState();
+  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
 }
 
-class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
-  final PageController _pageController = PageController();
-  bool _notifyMe = false;
-  int _currentPage = 0;
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  final ApplicationService _applicationService = ApplicationService();
+  final ApiService _apiService = ApiService();
 
-  // Sample data for the analytics cards.
-  final List<Map<String, dynamic>> _cardData = [
-    {
-      'current': 1,
-      'total': 3,
-      'percentage': 50,
-      'progress': 0.5,
-      'applicationNo': 721,
-    },
-    {
-      'current': 2,
-      'total': 3,
-      'percentage': 75,
-      'progress': 0.75,
-      'applicationNo': 109,
-    },
-    {
-      'current': 3,
-      'total': 3,
-      'percentage': 90,
-      'progress': 0.9,
-      'applicationNo': 512,
-    },
-  ];
-
-  // Sample data for the table.
-  final List<Map<String, String>> _applications = [
-    {'id': '791001', 'date': '26/11/24', 'status': 'In Progress'},
-    {'id': '791002', 'date': '26/11/24', 'status': 'In Progress'},
-    {'id': '791003', 'date': '26/11/24', 'status': 'In Progress'},
-  ];
-
-  // Filters for the horizontal row.
-  final List<String> _filters = ['All', 'Recent', 'Completed', 'Unfinished'];
-  String _activeFilter = 'All';
-
-  // Initial offset for the draggable floating button.
-  Offset _floatingButtonOffset = const Offset(170, 640);
-
-  // Button dimensions (adjust if needed)
-  final double _floatingButtonWidth = 180.0;
-  final double _floatingButtonHeight = 56.0;
+  Map<String, dynamic>? _analytics;
+  List<Map<String, dynamic>> _applications = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _pageController.addListener(() {
-      final page = _pageController.page ?? 0;
+    _loadAnalytics();
+  }
+
+  Future<void> _loadAnalytics() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // Load applications analytics and user applications
+      final analyticsResponse = await _apiService.getApplicationsAnalytics();
+      final applicationsResponse = await _applicationService.getApplications();
+
+      if (analyticsResponse.statusCode == 200) {
+        final analyticsData = jsonDecode(analyticsResponse.body);
+        setState(() {
+          _analytics = analyticsData;
+          _applications = applicationsResponse;
+          _isLoading = false;
+        });
+      } else {
+        throw Exception('Failed to load analytics');
+      }
+    } catch (e) {
+      print('Error loading analytics: $e');
+      // Use local analytics calculation as fallback
+      final applications = await _applicationService.getApplications();
+      final analytics = _calculateLocalAnalytics(applications);
       setState(() {
-        _currentPage = page.round();
+        _analytics = analytics;
+        _applications = applications;
+        _isLoading = false;
       });
+    }
+  }
+
+  Map<String, dynamic> _calculateLocalAnalytics(List<Map<String, dynamic>> applications) {
+    int totalApps = applications.length;
+    int completedApps = 0;
+    int inProgressApps = 0;
+    double totalProgress = 0.0;
+
+    for (var app in applications) {
+      final progress = double.tryParse(app['progress_percentage']?.toString() ?? '0') ?? 0.0;
+      final status = app['status']?.toString().toLowerCase() ?? '';
+
+      totalProgress += progress;
+
+      if (progress >= 100.0 || status == 'completed') {
+        completedApps++;
+      } else if (progress > 0 || status == 'in_progress' || status == 'submitted') {
+        inProgressApps++;
+      }
+    }
+
+    double avgProgress = totalApps > 0 ? totalProgress / totalApps : 0.0;
+
+    return {
+      'summary': {
+        'total_applications': totalApps,
+        'completed_applications': completedApps,
+        'in_progress_applications': inProgressApps,
+        'average_progress': avgProgress,
+        'recent_applications': totalApps,
+      }
+    };
+  }
+
+  Future<void> _editApplication(Map<String, dynamic> application) async {
+    // Navigate to application screen for editing
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ApplicationScreen(
+          application: application,
+        ),
+      ),
+    ).then((_) {
+      // Refresh data when returning from edit screen
+      _loadAnalytics();
     });
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  /// Builds a single analytics card.
-  Widget _buildAnalyticsCard(BuildContext context, Map<String, dynamic> data) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 15),
-      padding: const EdgeInsets.all(16),
-      width: MediaQuery.of(context).size.width * 0.88,
-      height: 230,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(
-          colors: [AppColors.darkGray, AppColors.lightGray],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+  Future<void> _deleteApplication(Map<String, dynamic> application) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceColor(context),
+        title: Text(
+          'Delete Application',
+          style: TextStyle(color: AppColors.textPrimary(context)),
         ),
-      ),
-      child: Stack(
-        children: [
-          // "X of total" at top-left.
-          Positioned(
-            top: 8,
-            left: 0,
-            child: Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.darkBlack.withOpacity(0.6),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                "${data['current']} of ${data['total']}",
-                style: const TextStyle(
-                  color: AppColors.myWhite,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+        content: Text(
+          'Are you sure you want to delete this application? This action cannot be undone.',
+          style: TextStyle(color: AppColors.textSecondary(context)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary(context))),
           ),
-          // Percentage text.
-          Positioned(
-            top: 40,
-            left: 0,
-            child: Text(
-              "${data['percentage']}%",
-              style: const TextStyle(
-                color: AppColors.darkBlue,
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          // Curved progress bar.
-          Positioned(
-            top: 100,
-            left: 0,
-            right: 200, // space for the SVG image on the right.
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: data['progress'],
-                minHeight: 6,
-                backgroundColor: AppColors.darkBlack.withOpacity(0.2),
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                    AppColors.darkBlue),
-              ),
-            ),
-          ),
-          // "View" button with navigation.
-          Positioned(
-            top: 130,
-            left: 0,
-            child: SizedBox(
-              width: 80,
-              height: 35,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.lightBlack,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  elevation: 0,
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AdmissionJourneyScreen(),
-                    ),
-                  );
-                },
-                child: const Text(
-                  "View",
-                  style: TextStyle(
-                    color: AppColors.myWhite,
-                    fontSize: 14,
-                    fontWeight: FontWeight.normal,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // "Application No." text.
-          Positioned(
-            top: 175,
-            left: 0,
-            child: Text(
-              "Application No. ${data['applicationNo']}",
-              style: const TextStyle(
-                color: AppColors.darkBlack,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          // analytics_2.svg image on the right.
-          Positioned(
-            right: 0,
-            top: 30,
-            child: SvgPicture.asset(
-              'assets/images/student_laptop.svg',
-              height: 120,
-              width: 120,
-            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
-  }
 
-  /// Builds the carousel of analytics cards with a dot indicator.
-  Widget _buildAnalyticsCarousel(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: SizedBox(
-            height: 230,
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: _cardData.length,
-              itemBuilder: (context, index) {
-                return _buildAnalyticsCard(context, _cardData[index]);
-              },
+    if (confirm == true) {
+      try {
+        final success = await _applicationService.deleteApplication(application['id'].toString());
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Application deleted successfully'),
+              backgroundColor: Colors.green,
             ),
+          );
+          _loadAnalytics(); // Refresh data
+        } else {
+          throw Exception('Failed to delete application');
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting application: $e'),
+            backgroundColor: Colors.red,
           ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_cardData.length, (index) {
-            final isActive = (index == _currentPage);
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: isActive ? 12 : 8,
-              height: isActive ? 12 : 8,
-              decoration: BoxDecoration(
-                color: isActive
-                    ? AppColors.lightBlue
-                    : AppColors.myWhite.withOpacity(0.3),
-                shape: BoxShape.circle,
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
-
-  /// Builds the horizontal filter row.
-  Widget _buildFilterTabs() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: _filters.map((filter) {
-          final bool isActive = (filter == _activeFilter);
-          return GestureDetector(
-            onTap: () => setState(() => _activeFilter = filter),
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-              decoration: BoxDecoration(
-                color: isActive ? AppColors.darkBlue : AppColors.lightGray,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                filter,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isActive ? AppColors.myWhite : AppColors.darkBlack,
-                  fontWeight: FontWeight.normal,
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  /// Builds a custom, draggable floating button that stays within bounds.
-  Widget _buildDraggableFloatingButton() {
-    return Positioned(
-      left: _floatingButtonOffset.dx,
-      top: _floatingButtonOffset.dy,
-      child: Draggable(
-        feedback: _buildFloatingButton(),
-        childWhenDragging: Container(),
-        onDraggableCanceled: (velocity, offset) {
-          // Calculate screen boundaries using MediaQuery.
-          final screenSize = MediaQuery.of(context).size;
-          // Optional: account for padding (e.g., status bar, safe area) if needed.
-          final double minX = 0;
-          final double minY = MediaQuery.of(context).padding.top + kToolbarHeight;
-          final double maxX =
-              screenSize.width - _floatingButtonWidth;
-          final double maxY =
-              screenSize.height - _floatingButtonHeight - MediaQuery.of(context).padding.bottom;
-          final double newX = offset.dx.clamp(minX, maxX);
-          final double newY = offset.dy.clamp(minY, maxY);
-          setState(() {
-            _floatingButtonOffset = Offset(newX, newY);
-          });
-        },
-        child: _buildFloatingButton(),
-      ),
-    );
-  }
-
-  Widget _buildFloatingButton() {
-    return SizedBox(
-      width: _floatingButtonWidth,
-      height: _floatingButtonHeight,
-      child: FloatingActionButton.extended(
-        backgroundColor: AppColors.darkBlue,
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SavedProgramsScreen(),
-            ),
-          );
-        },
-        icon: const Icon(Icons.folder, color: AppColors.myWhite),
-        label: const Text(
-          "Saved Programs",
-          style: TextStyle(color: AppColors.myWhite),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDataTable() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: MaterialStateProperty.all(
-              AppColors.myWhite.withOpacity(0.5)),
-          columnSpacing: 16,
-          columns: [
-            DataColumn(
-              label: Text(
-                "Application ID",
-                style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                "Date",
-                style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                "Status",
-                style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                "Edit",
-                style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-            DataColumn(
-              label: Text(
-                "Delete",
-                style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-          rows: _applications.map((application) {
-            return DataRow(cells: [
-              DataCell(
-                Text(
-                  application['id'] ?? "",
-                  style: TextStyle(
-                      color: Colors.white.withOpacity(0.8)),
-                ),
-              ),
-              DataCell(
-                Text(
-                  application['date'] ?? "",
-                  style: TextStyle(
-                      color: Colors.white.withOpacity(0.8)),
-                ),
-              ),
-              DataCell(
-                Text(
-                  application['status'] ?? "",
-                  style: TextStyle(
-                      color: Colors.white.withOpacity(0.8)),
-                ),
-              ),
-              DataCell(
-                IconButton(
-                  onPressed: () {
-                    // TODO: Implement edit functionality.
-                  },
-                  icon: SvgPicture.asset(
-                    "assets/images/edit.svg",
-                    height: 20,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                ),
-              ),
-              DataCell(
-                IconButton(
-                  onPressed: () {
-                    // TODO: Implement delete functionality.
-                  },
-                  icon: SvgPicture.asset(
-                    "assets/images/delete.svg",
-                    height: 20,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                ),
-              ),
-            ]);
-          }).toList(),
-        ),
-      ),
-    );
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
-      // Custom AppBar using GuideraHeader with back and notification icons.
+      backgroundColor: AppColors.backgroundColor(context),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Stack(
@@ -452,159 +173,560 @@ class _AnalyticsTrackingScreenState extends State<AnalyticsTrackingScreen> {
               child: IconButton(
                 icon: SvgPicture.asset(
                   "assets/images/back.svg",
-                  color: AppColors.myWhite,
+                  color: AppColors.textPrimary(context),
                   height: 30,
                 ),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-            Positioned(
-              top: 70,
-              right: 10,
-              child: IconButton(
-                icon: SvgPicture.asset(
-                  "assets/images/notification.svg",
-                  color: AppColors.myWhite,
-                  height: 30,
-                ),
-                onPressed: () {
-                  // TODO: Handle notifications action.
-                },
+                onPressed: () => Navigator.pop(context),
               ),
             ),
           ],
         ),
       ),
-      body: Stack(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+        onRefresh: _loadAnalytics,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'My Application Analytics',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary(context),
+                  fontFamily: 'Product Sans',
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Overview Cards
+              _buildOverviewCards(),
+              const SizedBox(height: 24),
+
+              // Progress Chart
+              _buildProgressChart(),
+              const SizedBox(height: 24),
+
+              // Active Applications
+              _buildActiveApplications(),
+              const SizedBox(height: 24),
+
+              // Status Distribution
+              _buildStatusDistribution(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverviewCards() {
+    if (_analytics == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Use actual analytics data with proper application status counting
+    int totalApps = 0;
+    int completedApps = 0;
+    int inProgressApps = 0;
+    double totalProgress = 0.0;
+
+    for (var app in _applications) {
+      totalApps++;
+      final progress = double.tryParse(app['progress_percentage']?.toString() ?? '0') ?? 0.0;
+      final status = app['status']?.toString().toLowerCase() ?? '';
+
+      totalProgress += progress;
+
+      if (progress >= 100.0 || status == 'completed') {
+        completedApps++;
+      } else if (progress > 0 || status == 'in_progress' || status == 'submitted') {
+        inProgressApps++;
+      }
+    }
+
+    double avgProgress = totalApps > 0 ? totalProgress / totalApps : 0.0;
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildOverviewCard(
+                'Total Applications',
+                totalApps.toString(),
+                Icons.assignment,
+                AppColors.lightBlue,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildOverviewCard(
+                'Completed',
+                completedApps.toString(),
+                Icons.check_circle,
+                Colors.green,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildOverviewCard(
+                'In Progress',
+                inProgressApps.toString(),
+                Icons.pending,
+                Colors.orange,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildOverviewCard(
+                'Avg Progress',
+                '${avgProgress.toStringAsFixed(1)}%',
+                Icons.trending_up,
+                AppColors.darkBlue,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOverviewCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceColor(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowColor(context),
+            blurRadius: 4,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                // Welcome row.
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 16),
-                  child: Row(
-                    mainAxisAlignment:
-                    MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Left: "Hello," and then user name.
-                      Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              "Hello,",
-                              style: TextStyle(
-                                color: AppColors.lightGray,
-                                fontSize: 17,
-                              ),
-                            ),
-                            Text(
-                              "Saad Mahmood",
-                              style: TextStyle(
-                                color: AppColors.myWhite,
-                                fontSize: 22,
-                                fontWeight: FontWeight.normal,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Right: "Notify me" + switch.
-                      Row(
-                        children: [
-                          const Text(
-                            "Notify me",
-                            style: TextStyle(
-                              color: AppColors.myWhite,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(width: 3),
-                          Switch(
-                            value: _notifyMe,
-                            onChanged: (val) {
-                              setState(() => _notifyMe = val);
-                            },
-                            activeColor: AppColors.lightBlue,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(icon, color: color, size: 24),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary(context),
+                  fontFamily: 'Product Sans',
                 ),
-                // "Analytics & Tracking" title.
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Analytics & Tracking",
-                      style: TextStyle(
-                        color: AppColors.myWhite,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                // Analytics card carousel.
-                _buildAnalyticsCarousel(context),
-                const SizedBox(height: 20),
-                // Horizontal filter row.
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildFilterTabs(),
-                ),
-                const SizedBox(height: 12),
-                // Data table for applications.
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _buildDataTable(),
-                ),
-                const SizedBox(height: 30),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary(context),
+              fontFamily: 'Product Sans',
             ),
           ),
-          // Draggable Floating Button for viewing saved programs.
-          Positioned(
-            left: _floatingButtonOffset.dx,
-            top: _floatingButtonOffset.dy,
-            child: GestureDetector(
-              onPanUpdate: (details) {
-                setState(() {
-                  _floatingButtonOffset += details.delta;
-                });
-              },
-              child: FloatingActionButton.extended(
-                backgroundColor: AppColors.darkBlue,
-                label: Text(
-                  "Saved Programs",
-                  style: const TextStyle(color: AppColors.myWhite, fontFamily: 'Product Sans'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressChart() {
+    if (_applications.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceColor(context),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(
+          child: Text(
+            'No applications to show progress',
+            style: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontFamily: 'Product Sans',
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceColor(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowColor(context),
+            blurRadius: 4,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Application Progress',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(context),
+              fontFamily: 'Product Sans',
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 200,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: 100,
+                barTouchData: BarTouchData(enabled: false),
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        if (value.toInt() < _applications.length) {
+                          final app = _applications[value.toInt()];
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              (app['university_title']?.toString() ?? 'App ${value.toInt() + 1}')
+                                  .substring(0, 8),
+                              style: TextStyle(
+                                color: AppColors.textSecondary(context),
+                                fontSize: 10,
+                              ),
+                            ),
+                          );
+                        }
+                        return const Text('');
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          '${value.toInt()}%',
+                          style: TextStyle(
+                            color: AppColors.textSecondary(context),
+                            fontSize: 10,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
-                icon: SvgPicture.asset(
-                  'assets/images/folder.svg',
-                  width: 25,
-                  color: AppColors.myWhite,
-                ),
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SavedProgramsScreen()),
+                borderData: FlBorderData(show: false),
+                barGroups: _applications.asMap().entries.map((entry) {
+                  final progress = double.tryParse(
+                      entry.value['progress_percentage']?.toString() ?? '0') ?? 0.0;
+                  return BarChartGroupData(
+                    x: entry.key,
+                    barRods: [
+                      BarChartRodData(
+                        toY: progress,
+                        color: _getProgressColor(progress.toInt()),
+                        width: 20,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(4),
+                          topRight: Radius.circular(4),
+                        ),
+                      ),
+                    ],
                   );
-                },
+                }).toList(),
               ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Color _getProgressColor(int progress) {
+    if (progress >= 80) return Colors.green;
+    if (progress >= 50) return Colors.orange;
+    return Colors.red;
+  }
+
+  Widget _buildActiveApplications() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceColor(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowColor(context),
+            blurRadius: 4,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'My Active Applications',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(context),
+              fontFamily: 'Product Sans',
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (_applications.isEmpty)
+            Center(
+              child: Text(
+                'No applications yet',
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontFamily: 'Product Sans',
+                ),
+              ),
+            )
+          else
+            ..._applications.map((app) => _buildApplicationTile(app)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApplicationTile(Map<String, dynamic> app) {
+    final progress = double.tryParse(app['progress_percentage']?.toString() ?? '0') ?? 0.0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundColor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.borderColor(context),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _getProgressColor(progress.toInt()),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  app['university_title']?.toString() ?? 'Unknown University',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary(context),
+                    fontFamily: 'Product Sans',
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  app['program_title']?.toString() ?? 'Unknown Program',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary(context),
+                    fontFamily: 'Product Sans',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${progress.toStringAsFixed(0)}%',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: _getProgressColor(progress.toInt()),
+              fontFamily: 'Product Sans',
+            ),
+          ),
+          const SizedBox(width: 12),
+          PopupMenuButton<String>(
+            icon: Icon(
+              Icons.more_vert,
+              color: AppColors.textSecondary(context),
+            ),
+            onSelected: (value) {
+              if (value == 'edit') {
+                _editApplication(app);
+              } else if (value == 'delete') {
+                _deleteApplication(app);
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 18, color: AppColors.textPrimary(context)),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Edit',
+                      style: TextStyle(color: AppColors.textPrimary(context)),
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete, size: 18, color: Colors.red),
+                    const SizedBox(width: 8),
+                    const Text('Delete', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusDistribution() {
+    if (_applications.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Calculate status distribution properly
+    final statusCounts = <String, int>{};
+    for (final app in _applications) {
+      final progress = double.tryParse(app['progress_percentage']?.toString() ?? '0') ?? 0.0;
+      final status = app['status']?.toString().toLowerCase() ?? '';
+
+      String displayStatus;
+      if (progress >= 100.0 || status == 'completed') {
+        displayStatus = 'completed';
+      } else if (progress > 0 || status == 'in_progress' || status == 'submitted') {
+        displayStatus = 'in_progress';
+      } else {
+        displayStatus = 'started';
+      }
+
+      statusCounts[displayStatus] = (statusCounts[displayStatus] ?? 0) + 1;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceColor(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowColor(context),
+            blurRadius: 4,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Status Distribution',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(context),
+              fontFamily: 'Product Sans',
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...statusCounts.entries.map((entry) => _buildStatusItem(entry.key, entry.value)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusItem(String status, int count) {
+    final total = _applications.length;
+    final percentage = (count / total * 100).toStringAsFixed(1);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: _getStatusColor(status),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              status.toUpperCase(),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textPrimary(context),
+                fontFamily: 'Product Sans',
+              ),
+            ),
+          ),
+          Text(
+            '$count ($percentage%)',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary(context),
+              fontFamily: 'Product Sans',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return Colors.green;
+      case 'in_progress':
+        return Colors.orange;
+      case 'started':
+        return AppColors.lightBlue;
+      default:
+        return AppColors.textSecondary(context);
+    }
   }
 }
