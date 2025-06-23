@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -5,6 +7,8 @@ import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
 import 'package:guidera_app/models/program.dart';
 import 'package:guidera_app/services/saved_programs_service.dart';
+import 'package:guidera_app/services/application_service.dart';
+import 'package:guidera_app/screens/applications_screen.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,6 +28,12 @@ class _UniversityInformationState extends State<UniversityInformation> {
   bool _isSaving = false;
   final Map<String, bool> _expandedTexts = {};
   final SavedProgramsService _savedProgramsService = SavedProgramsService();
+  final ApplicationService _applicationService = ApplicationService();
+
+  // Application status tracking
+  Map<String, dynamic>? _applicationStatus;
+  bool _isCheckingApplication = true;
+  bool _isStartingApplication = false;
 
   final List<String> chipLabels = [
     'Overview',
@@ -38,6 +48,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
   void initState() {
     super.initState();
     _checkIfSaved();
+    _checkApplicationStatus();
   }
 
   Future<void> _checkIfSaved() async {
@@ -51,6 +62,353 @@ class _UniversityInformationState extends State<UniversityInformation> {
       setState(() {
         _isCheckingSaved = false;
       });
+    }
+  }
+
+  Future<void> _checkApplicationStatus() async {
+    try {
+      final response = await _applicationService.getApiService().checkApplicationStatus(
+        programId: widget.program.id,
+        universityId: widget.program.universityId,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _applicationStatus = data['exists'] ? data['application'] : null;
+          _isCheckingApplication = false;
+        });
+      } else {
+        setState(() {
+          _applicationStatus = null;
+          _isCheckingApplication = false;
+        });
+      }
+    } catch (e) {
+      print('Error checking application status: $e');
+      setState(() {
+        _isCheckingApplication = false;
+      });
+    }
+  }
+
+  Future<void> _startApplication() async {
+    if (_isStartingApplication) return;
+
+    setState(() => _isStartingApplication = true);
+
+    try {
+      // First check if deadline has passed
+      final deadlineResponse = await _applicationService.getApiService().get(
+        '/programs/${widget.program.id}/${widget.program.universityId}/deadline-check',
+        auth: true,
+      );
+
+      if (deadlineResponse.statusCode == 200) {
+        final deadlineData = jsonDecode(deadlineResponse.body);
+
+        if (!deadlineData['canApply']) {
+          // Show deadline exceeded dialog
+          _showDeadlineExceededDialog(deadlineData['reason']);
+          setState(() => _isStartingApplication = false);
+          return;
+        }
+      }
+
+      // Proceed with starting application
+      final success = await _applicationService.startApplication(
+        widget.program.id,
+        widget.program.universityId,
+      );
+
+      if (success) {
+        Fluttertoast.showToast(
+          msg: "Application started successfully! 🎉",
+          backgroundColor: AppColors.darkBlue,
+          textColor: AppColors.myWhite,
+        );
+
+        // Refresh application status
+        await _checkApplicationStatus();
+      }
+    } catch (e) {
+      if (e.toString().contains('deadline')) {
+        _showDeadlineExceededDialog(e.toString().replaceAll('Exception: ', ''));
+      } else {
+        Fluttertoast.showToast(
+          msg: e.toString().replaceAll('Exception: ', ''),
+          backgroundColor: Colors.red,
+          textColor: AppColors.myWhite,
+        );
+      }
+    } finally {
+      setState(() => _isStartingApplication = false);
+    }
+  }
+
+  void _showDeadlineExceededDialog(String reason) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.surfaceColor(context),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Application Deadline Exceeded',
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                reason,
+                style: TextStyle(
+                  color: AppColors.textSecondary(context),
+                  fontSize: 16,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.orange.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.orange,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Unfortunately, you cannot start an application for this program as the deadline has already passed.',
+                        style: TextStyle(
+                          color: Colors.orange.shade700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                backgroundColor: AppColors.darkBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text('I Understand'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _navigateToApplication() {
+    if (_applicationStatus != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ApplicationScreen(
+            application: {
+              'id': _applicationStatus!['id'],
+              'program_title': widget.program.displayTitle,
+              'university_title': widget.program.universityTitle,
+              'status': _applicationStatus!['status'],
+              'progress_percentage': _applicationStatus!['progress_percentage'],
+              'phases': _applicationStatus!['phases'],
+            },
+          ),
+        ),
+      ).then((_) {
+        // Refresh application status when returning
+        _checkApplicationStatus();
+      });
+    }
+  }
+
+  Widget _buildApplicationStatusButton() {
+    if (_isCheckingApplication) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.lightBlue.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.lightBlue,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Checking...',
+              style: TextStyle(
+                color: AppColors.lightBlue,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_applicationStatus == null) {
+      // No application exists - show start button
+      return GestureDetector(
+        onTap: _isStartingApplication ? null : _startApplication,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: _isStartingApplication
+                ? Colors.grey.withOpacity(0.3)
+                : AppColors.darkBlue,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_isStartingApplication) ...[
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Starting...',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(width: 6),
+                const Text(
+                  'Apply',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    } else {
+      // Application exists - show status
+      final progress = double.tryParse(_applicationStatus!['progress_percentage']?.toString() ?? '0') ?? 0.0;
+      final status = _applicationStatus!['status']?.toString() ?? 'started';
+
+      Color statusColor;
+      String statusText;
+      IconData statusIcon;
+
+      if (progress >= 100.0 || status == 'completed') {
+        statusColor = Colors.green;
+        statusText = 'Completed';
+        statusIcon = Icons.check_circle;
+      } else if (progress > 0 || status == 'in_progress') {
+        statusColor = Colors.orange;
+        statusText = 'In Progress';
+        statusIcon = Icons.pending;
+      } else {
+        statusColor = AppColors.lightBlue;
+        statusText = 'Started';
+        statusIcon = Icons.play_circle_outline;
+      }
+
+      return GestureDetector(
+        onTap: _navigateToApplication,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: statusColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: statusColor,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                statusIcon,
+                color: statusColor,
+                size: 18,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                statusText,
+                style: TextStyle(
+                  color: statusColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (progress > 0 && progress < 100) ...[
+                const SizedBox(width: 8),
+                Text(
+                  '${progress.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
     }
   }
 
@@ -730,9 +1088,13 @@ class _UniversityInformationState extends State<UniversityInformation> {
                               ),
                             ),
                           ),
+                          const SizedBox(width: 14),
+                          // Application Status Button
+                          _buildApplicationStatusButton(),
                         ],
                       ],
                     ),
+
                     const SizedBox(height: 14),
                     Wrap(
                       spacing: 6.0,

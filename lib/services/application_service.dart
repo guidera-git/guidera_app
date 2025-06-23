@@ -4,6 +4,9 @@ import 'package:guidera_app/services/api_service.dart';
 class ApplicationService {
   final ApiService _apiService = ApiService();
 
+  // Expose ApiService for additional calls
+  ApiService getApiService() => _apiService;
+
   // Get all user applications
   Future<List<Map<String, dynamic>>> getApplications() async {
     try {
@@ -111,7 +114,7 @@ class ApplicationService {
     }
   }
 
-  // Update application phase status (legacy support)
+  // Update application phase status (with smart deadline removal)
   Future<bool> updateApplicationPhase(
       String applicationId,
       String phase,
@@ -141,9 +144,15 @@ class ApplicationService {
   // Update application status
   Future<bool> updateApplicationStatus(String applicationId, String status) async {
     try {
-      // This would need to be implemented in your API service
-      // For now, we'll return true as a placeholder
-      return true;
+      final response = await _apiService.patch('/applications/$applicationId/status', {
+        'status': status,
+      }, auth: true);
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        return false;
+      }
     } catch (e) {
       print('Error updating application status: $e');
       return false;

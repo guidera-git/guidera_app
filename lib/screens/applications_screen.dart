@@ -31,18 +31,15 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1️⃣ Call returns a Map<String, dynamic>, not Response
       final Map<String, dynamic>? data = await _applicationService
           .getApplication(widget.application['id'].toString());
 
       if (data != null) {
-        // 2️⃣ Pull phases directly out of the decoded map
         setState(() {
           _phases = List<Map<String, dynamic>>.from(data['phases'] ?? []);
           _isLoading = false;
         });
       } else {
-        // 3️⃣ Handle unexpected null
         throw Exception('No data returned from server');
       }
     } catch (e) {
@@ -55,51 +52,32 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
     }
   }
 
-
   List<Map<String, dynamic>> _getDefaultPhases() {
     return [
       {
-        'phase': 'application_submitted',
-        'description': 'Submit your online application to the university.',
+        'phase': 'document_gathering',
+        'description': 'Start gathering all required documents for your application. Get your transcripts, certificates, and other necessary paperwork ready.',
         'completed': false,
         'note': null,
       },
       {
-        'phase': 'test_scheduled',
-        'description': 'Schedule your admission test.',
+        'phase': 'application_submission',
+        'description': 'Submit your completed application form with all required documents to the university.',
         'completed': false,
         'note': null,
       },
       {
-        'phase': 'test_taken',
-        'description': 'Take the admission test on the scheduled date.',
+        'phase': 'application_fee_submission',
+        'description': 'Pay the application fee as required by the university. Check deadlines to avoid missing the payment window.',
         'completed': false,
         'note': null,
       },
       {
-        'phase': 'interview_scheduled',
-        'description': 'Book your interview slot with the admission panel.',
+        'phase': 'entry_test_and_result',
+        'description': 'Complete your entry test, attend interview if required, and receive your admission result.',
         'completed': false,
         'note': null,
-      },
-      {
-        'phase': 'interview_completed',
-        'description': 'Attend and complete your interview successfully.',
-        'completed': false,
-        'note': null,
-      },
-      {
-        'phase': 'admission_offer_received',
-        'description': 'Receive an admission offer from the university.',
-        'completed': false,
-        'note': null,
-      },
-      {
-        'phase': 'offer_accepted',
-        'description': 'Confirm and accept the admission offer.',
-        'completed': false,
-        'note': null,
-      },
+      }
     ];
   }
 
@@ -145,7 +123,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
         );
 
         Fluttertoast.showToast(
-          msg: newCompleted ? "Phase Completed!" : "Phase Unmarked!",
+          msg: newCompleted ? "Stage Completed! 🎉" : "Stage Unmarked!",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: AppColors.darkBlue,
@@ -155,7 +133,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
       }
     } catch (e) {
       Fluttertoast.showToast(
-        msg: "Error updating phase: $e",
+        msg: "Error updating stage: $e",
         backgroundColor: Colors.red,
         textColor: AppColors.myWhite,
       );
@@ -246,122 +224,205 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
 
   String _getPhaseTitle(String phase) {
     switch (phase) {
-      case 'application_submitted':
-        return 'Application Submitted';
-      case 'test_scheduled':
-        return 'Test Scheduled';
-      case 'test_taken':
-        return 'Test Taken';
-      case 'interview_scheduled':
-        return 'Interview Scheduled';
-      case 'interview_completed':
-        return 'Interview Completed';
-      case 'admission_offer_received':
-        return 'Admission Offer Received';
-      case 'offer_accepted':
-        return 'Offer Accepted';
+      case 'document_gathering':
+        return '1. Document Gathering';
+      case 'application_submission':
+        return '2. Application Submission';
+      case 'application_fee_submission':
+        return '3. Application Fee Submission';
+      case 'entry_test_and_result':
+        return '4. Entry Test & Result';
       default:
         return phase.replaceAll('_', ' ').toUpperCase();
+    }
+  }
+
+  IconData _getPhaseIcon(String phase) {
+    switch (phase) {
+      case 'document_gathering':
+        return Icons.folder_outlined;
+      case 'application_submission':
+        return Icons.send_outlined;
+      case 'application_fee_submission':
+        return Icons.payment_outlined;
+      case 'entry_test_and_result':
+        return Icons.school_outlined;
+      default:
+        return Icons.check_circle_outline;
+    }
+  }
+
+  Color _getPhaseColor(String phase, bool isCompleted) {
+    if (isCompleted) return Colors.green;
+
+    switch (phase) {
+      case 'document_gathering':
+        return Colors.blue;
+      case 'application_submission':
+        return Colors.orange;
+      case 'application_fee_submission':
+        return Colors.purple;
+      case 'entry_test_and_result':
+        return Colors.teal;
+      default:
+        return AppColors.lightBlue;
     }
   }
 
   Widget _buildPhaseCard(int index) {
     final phase = _phases[index];
     final isCompleted = phase['completed'] ?? false;
+    final phaseColor = _getPhaseColor(phase['phase'], isCompleted);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isCompleted ? AppColors.lightBlue.withOpacity(0.3) : AppColors.surfaceColor(context),
-        borderRadius: BorderRadius.circular(12),
+        color: isCompleted
+            ? phaseColor.withOpacity(0.1)
+            : AppColors.surfaceColor(context),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isCompleted ? AppColors.lightBlue : AppColors.borderColor(context),
+          color: isCompleted ? phaseColor : AppColors.borderColor(context),
           width: 2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: phaseColor.withOpacity(0.1),
+            blurRadius: 8,
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: phaseColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Icon(
-                  isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-                  key: ValueKey<bool>(isCompleted),
-                  color: isCompleted ? AppColors.lightBlue : AppColors.textSecondary(context),
-                  size: 28,
+                  isCompleted ? Icons.check_circle : _getPhaseIcon(phase['phase']),
+                  color: phaseColor,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   _getPhaseTitle(phase['phase']),
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary(context),
                   ),
                 ),
               ),
               if (isCompleted)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.darkBlue,
-                    borderRadius: BorderRadius.circular(8),
+                    color: phaseColor,
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
-                      "Completed",
-                      style: TextStyle(color: AppColors.myWhite, fontSize: 12)
+                    "✓ Completed",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             phase['description'] ?? '',
-            style: TextStyle(color: AppColors.textSecondary(context)),
+            style: TextStyle(
+              color: AppColors.textSecondary(context),
+              fontSize: 14,
+              height: 1.4,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               TextButton.icon(
                 onPressed: () => _addOrEditNote(index),
-                icon: SvgPicture.asset(
-                  "assets/images/note_filled.svg",
+                icon: Icon(
+                  Icons.note_add_outlined,
                   color: AppColors.textPrimary(context),
-                  height: 25,
+                  size: 20,
                 ),
                 label: Text(
-                    "Add Note",
-                    style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14)
+                  phase['note'] != null && phase['note'].toString().isNotEmpty
+                      ? "Edit Note"
+                      : "Add Note",
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontSize: 14,
+                  ),
                 ),
               ),
-              TextButton(
+              ElevatedButton(
                 onPressed: _isUpdating ? null : () => _togglePhase(index),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isCompleted ? Colors.grey : phaseColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
                 child: Text(
-                  isCompleted ? "Undo" : "Mark Complete",
-                  style: TextStyle(
-                      color: _isUpdating ? AppColors.textSecondary(context) : AppColors.lightBlue,
-                      fontSize: 14
+                  isCompleted ? "Completed" : "Mark Complete",
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ],
           ),
           if (phase['note'] != null && phase['note']!.toString().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: Text(
-                "Note: ${phase['note']}",
-                style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontStyle: FontStyle.italic
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundColor(context),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.borderColor(context),
+                  width: 1,
                 ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.sticky_note_2_outlined,
+                    color: AppColors.textSecondary(context),
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      phase['note'],
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -369,61 +430,101 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
     );
   }
 
-  Widget _buildAnalyticsDashboard() {
+  Widget _buildProgressHeader() {
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surfaceColor(context),
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.darkBlue,
+            AppColors.lightBlue,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.darkBlue.withOpacity(0.3),
+            blurRadius: 10,
+            spreadRadius: 0,
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.application['university_title'] ?? 'Application Progress',
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.application['university_title'] ?? 'Application Progress',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.application['program_title'] ?? '',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.application['program_title'] ?? '',
-                  style: TextStyle(
-                    color: AppColors.textSecondary(context),
-                    fontSize: 14,
-                  ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  "Overall Progress: ${(progressPercent * 100).toStringAsFixed(0)}%",
-                  style: TextStyle(color: AppColors.textPrimary(context), fontSize: 16),
-                  textAlign: TextAlign.left,
+                child: Column(
+                  children: [
+                    Text(
+                      "${(progressPercent * 100).toStringAsFixed(0)}%",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      "Complete",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: progressPercent,
-                    minHeight: 6,
-                    backgroundColor: AppColors.backgroundColor(context).withOpacity(0.5),
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.lightBlue),
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progressPercent,
+              minHeight: 8,
+              backgroundColor: Colors.white.withOpacity(0.3),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             ),
           ),
-          const SizedBox(width: 16),
-          SvgPicture.asset(
-            "assets/images/visual_2.svg",
-            height: 100,
-            width: 100,
+          const SizedBox(height: 8),
+          Text(
+            "${_phases.where((p) => p['completed'] == true).length} of ${_phases.length} stages completed",
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
           ),
         ],
       ),
@@ -460,7 +561,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
         children: [
-          _buildAnalyticsDashboard(),
+          _buildProgressHeader(),
           Expanded(
             child: ListView.builder(
               itemCount: _phases.length,
