@@ -10,9 +10,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
-
-
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
@@ -22,16 +19,13 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-
-  // Controllers for the input fields.
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final _api         = ApiService();
+  final _api = ApiService();
   final _storage = FlutterSecureStorage();
 
   @override
   void dispose() {
-    // Dispose controllers when the widget is removed.
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -41,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final response = await _api.post(
       '/auth/login',
       {
-        'email':    _emailController.text.trim(),
+        'email': _emailController.text.trim(),
         'password': _passwordController.text,
       },
     );
@@ -61,12 +55,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.myBlack,
-      // Custom AppBar using GuideraHeader with a back button.
+      backgroundColor: AppColors.backgroundColor(context),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Stack(
@@ -78,14 +72,13 @@ class _LoginScreenState extends State<LoginScreen> {
               child: IconButton(
                 icon: SvgPicture.asset(
                   "assets/images/back.svg",
-                  color: AppColors.myWhite,
+                  color: AppColors.textPrimary(context),
                   height: 30,
                 ),
                 onPressed: () {
                   if (Navigator.canPop(context)) {
                     Navigator.pop(context);
                   } else {
-                    // Fallback: navigate to a default screen (e.g., HomeScreen)
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => const LoginSignup()),
@@ -99,8 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding:
-          const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -108,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(
                 "Welcome Back",
                 style: TextStyle(
-                  color: AppColors.myWhite,
+                  color: AppColors.textPrimary(context),
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                 ),
@@ -117,59 +109,67 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(
                 "Log in to your account",
                 style: TextStyle(
-                  color: AppColors.myGray,
+                  color: AppColors.textSecondary(context),
                   fontSize: 16,
                 ),
               ),
               const SizedBox(height: 40),
-              // Login Form.
               Form(
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Email Field.
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      style: const TextStyle(color: AppColors.myWhite),
+                      style: TextStyle(color: AppColors.textPrimary(context)),
                       decoration: InputDecoration(
                         hintText: "Email",
-                        hintStyle:
-                        const TextStyle(color: AppColors.myGray),
+                        hintStyle: TextStyle(color: AppColors.textSecondary(context)),
                         filled: true,
-                        fillColor: AppColors.lightBlack,
-                        prefixIcon: const Icon(Icons.email,
-                            color: AppColors.myWhite),
+                        fillColor: AppColors.surfaceColor(context),
+                        prefixIcon: Icon(Icons.email, color: AppColors.textPrimary(context)),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide(color: AppColors.borderColor(context)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide(color: AppColors.primary(context)),
                         ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return "Please enter your email";
                         }
-                        // Optionally, add email format validation here.
                         return null;
                       },
                     ),
                     const SizedBox(height: 20),
-                    // Password Field.
                     TextFormField(
                       controller: _passwordController,
                       obscureText: true,
-                      style: const TextStyle(color: AppColors.myWhite),
+                      style: TextStyle(color: AppColors.textPrimary(context)),
                       decoration: InputDecoration(
                         hintText: "Password",
-                        hintStyle:
-                        const TextStyle(color: AppColors.myGray),
+                        hintStyle: TextStyle(color: AppColors.textSecondary(context)),
                         filled: true,
-                        fillColor: AppColors.lightBlack,
-                        prefixIcon: const Icon(Icons.lock,
-                            color: AppColors.myWhite),
+                        fillColor: AppColors.surfaceColor(context),
+                        prefixIcon: Icon(Icons.lock, color: AppColors.textPrimary(context)),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide.none,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide(color: AppColors.borderColor(context)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide(color: AppColors.primary(context)),
                         ),
                       ),
                       validator: (value) {
@@ -180,27 +180,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     const SizedBox(height: 10),
-                    // Forgot Password Link.
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
                           // TODO: Implement forgot password logic.
                         },
-                        child: const Text(
+                        child: Text(
                           "Forgot Password?",
                           style: TextStyle(color: AppColors.darkBlue),
                         ),
                       ),
                     ),
                     const SizedBox(height: 30),
-                    // Login Button.
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.darkBlue,
+                          foregroundColor: AppColors.myWhite,
                           elevation: 5,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
@@ -212,7 +211,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.myWhite,
                           ),
                         ),
                       ),
@@ -221,21 +219,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-              // Sign up prompt.
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     "Don't have an account?",
                     style: TextStyle(
-                        color: AppColors.myGray, fontSize: 16),
+                      color: AppColors.textSecondary(context),
+                      fontSize: 16,
+                    ),
                   ),
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
-                            builder: (context) =>
-                            const SignUpScreen()),
+                          builder: (context) => const SignUpScreen(),
+                        ),
                       );
                     },
                     child: Text(

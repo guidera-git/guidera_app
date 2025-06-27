@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../Widgets/models.dart';
+import '../models/models.dart';
 
 /// Detail page for a specific test.
 class TestDetailPage extends StatelessWidget {

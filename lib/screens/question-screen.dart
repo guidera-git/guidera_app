@@ -1,5 +1,3 @@
-// question-screen.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -8,15 +6,13 @@ import 'package:guidera_app/screens/result_loading_screen.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
-import 'package:guidera_app/screens/question-screen.dart';
-import '../Widgets/header.dart';
+import '../widgets/header.dart';
 
-/// Model class for questions loaded from API
 class Question {
   final String id;
   final String questionText;
   final List<String> options;
-  final String correctAnswer; // note: for the initial fetch this is blank
+  final String correctAnswer;
   String? selectedOption;
 
   Question({
@@ -35,14 +31,11 @@ class Question {
           ?.map((o) => o.toString())
           .toList() ??
           [],
-      // When the server returns the “new test,” there is no correct_ans field.
-      // So we default to empty string here.
       correctAnswer: json['correct_ans']?.toString() ?? '',
     );
   }
 }
 
-/// Provider to manage question state, timer, and submission
 class QuestionProvider extends ChangeNotifier {
   final String subjectName;
   final String attemptId;
@@ -54,7 +47,6 @@ class QuestionProvider extends ChangeNotifier {
   late Timer _timer;
   final ApiService _apiService = ApiService();
 
-  // Scroll controller for custom scrollbar
   final ScrollController scrollController = ScrollController();
   double sliderPosition = 0.0;
   static const double questionWidgetHeight = 200.0;
@@ -111,7 +103,6 @@ class QuestionProvider extends ChangeNotifier {
     });
   }
 
-
   @override
   void dispose() {
     _timer.cancel();
@@ -123,7 +114,6 @@ class QuestionProvider extends ChangeNotifier {
     submitting = true;
     notifyListeners();
 
-    // Build the answers map: { questionId: selectedOption, … }
     final answers = <String, String>{
       for (var q in questions)
         if (q.selectedOption != null) q.id: q.selectedOption!,
@@ -132,7 +122,6 @@ class QuestionProvider extends ChangeNotifier {
     try {
       final resp = await _apiService.submitTest(attemptId, answers);
       if (resp.statusCode == 200) {
-        // On successful submission, push the loader screen.
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -143,12 +132,10 @@ class QuestionProvider extends ChangeNotifier {
           ),
         );
       } else {
-        // If submission failed, show a SnackBar
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(
                   'Submission failed: ${resp.statusCode}')),
-
         );
       }
     } catch (e) {
@@ -162,11 +149,10 @@ class QuestionProvider extends ChangeNotifier {
   }
 }
 
-/// UI for displaying and answering questions with honor pledge
 class QuestionScreen extends StatefulWidget {
   final String subjectName;
   final String attemptId;
-  final List<dynamic> questions; // raw JSON from backend
+  final List<dynamic> questions;
 
   const QuestionScreen({
     Key? key,
@@ -201,7 +187,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBlack,
+      backgroundColor: AppColors.backgroundColor(context),
       body: ChangeNotifierProvider(
         create: (_) => QuestionProvider(
           subjectName: widget.subjectName,
@@ -237,7 +223,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
                   children: [
                     const SizedBox(
                         height: 120, child: GuideraHeader()),
-                    // Subject title & timer
                     Padding(
                       padding:
                       const EdgeInsets.symmetric(horizontal: 16.0),
@@ -247,7 +232,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                         children: [
                           Text(widget.subjectName,
                               style: TextStyle(
-                                  color: AppColors.myWhite,
+                                  color: AppColors.textPrimary(context),
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold)),
                           Row(
@@ -256,32 +241,30 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                   'assets/images/timer.svg',
                                   width: 20,
                                   height: 20,
-                                  color: AppColors.myWhite),
+                                  color: AppColors.textPrimary(context)),
                               const SizedBox(width: 8),
                               Text(provider.timeLeft,
                                   style: TextStyle(
-                                      color: AppColors.myWhite,
+                                      color: AppColors.textPrimary(context),
                                       fontSize: 16)),
                             ],
                           ),
                         ],
                       ),
                     ),
-                    // Progress bar
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: LinearProgressIndicator(
                           value: provider.progress / 100,
-                          backgroundColor: AppColors.myWhite,
+                          backgroundColor: AppColors.borderColor(context),
                           valueColor: AlwaysStoppedAnimation(
-                              AppColors.darkBlue),
+                              AppColors.primary(context)),
                           minHeight: 12,
                         ),
                       ),
                     ),
-                    // Question list
                     Expanded(
                       child: SingleChildScrollView(
                         controller: provider.scrollController,
@@ -298,7 +281,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                   horizontal: 16.0,
                                   vertical: 8.0),
                               child: Card(
-                                color: AppColors.lightBlack,
+                                color: AppColors.surfaceColor(context),
                                 shape: RoundedRectangleBorder(
                                     borderRadius:
                                     BorderRadius.circular(16)),
@@ -313,7 +296,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                           'Q${idx + 1}. ${q.questionText}',
                                           style: TextStyle(
                                               color:
-                                              AppColors.myWhite,
+                                              AppColors.textPrimary(context),
                                               fontSize: 17)),
                                       ...q.options.map(
                                               (opt) =>
@@ -327,9 +310,9 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                                 title: Text(opt,
                                                     style: TextStyle(
                                                         color: AppColors
-                                                            .myWhite)),
+                                                            .textPrimary(context))),
                                                 activeColor: AppColors
-                                                    .lightBlue,
+                                                    .primary(context),
                                               )),
                                     ],
                                   ),
@@ -340,9 +323,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                         ),
                       ),
                     ),
-                    // Honor pledge
                     Row(
-
                       children: [
                         const SizedBox(height: 90),
                         Checkbox(
@@ -351,21 +332,17 @@ class _QuestionScreenState extends State<QuestionScreen> {
                               ? (val) =>
                               setState(() => isChecked = val!)
                               : null,
-                          activeColor: AppColors.lightBlue,
+                          activeColor: AppColors.primary(context),
                         ),
-
                         Expanded(
                           child: RichText(
                             text: TextSpan(
-                              // This default style applies to all spans that don’t override it:
                               style: TextStyle(
-                                color: AppColors.myWhite,
-                                fontSize: 16, // (optional) match whatever font size you need
+                                color: AppColors.textPrimary(context),
+                                fontSize: 16,
                               ),
                               children: [
-                                // Normal text before the username
                                 TextSpan(text: 'I, '),
-                                // Username span: bold + underlined
                                 TextSpan(
                                   text: userName,
                                   style: TextStyle(
@@ -373,7 +350,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
                                     decoration: TextDecoration.underline,
                                   ),
                                 ),
-                                // Remaining text after the username
                                 TextSpan(
                                   text:
                                   ', understand that submitting work that isn\'t my own may result in failure or account deactivation.',
@@ -382,10 +358,8 @@ class _QuestionScreenState extends State<QuestionScreen> {
                             ),
                           ),
                         ),
-
                       ],
                     ),
-                    // Submit button
                     Padding(
                       padding: const EdgeInsets.all(1.0),
                       child: ElevatedButton(
@@ -395,7 +369,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                             ? () => provider.submitAnswers(context)
                             : null,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.lightBlue,
+                          backgroundColor: AppColors.primary(context),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 20, vertical: 10),
                         ),
@@ -413,21 +387,32 @@ class _QuestionScreenState extends State<QuestionScreen> {
                     ),
                   ],
                 ),
-                // Back button
                 Positioned(
                   top: 83,
                   left: 23,
                   child: GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: SvgPicture.asset(
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceColor(context),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.shadowColor(context),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: SvgPicture.asset(
                         'assets/images/back.svg',
-                        height: 28,
-                        colorFilter: ColorFilter.mode(
-                            AppColors.myWhite,
-                            BlendMode.srcIn)),
+                        height: 24,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
                   ),
                 ),
-                // Custom scrollbar
                 Positioned(
                   right: -17,
                   top: 200,
@@ -455,7 +440,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                             bottom: 0,
                             child: Container(
                               width: 2,
-                              color: AppColors.myGray,
+                              color: AppColors.borderColor(context),
                             ),
                           ),
                           Positioned(
@@ -466,7 +451,7 @@ class _QuestionScreenState extends State<QuestionScreen> {
                               height: 20,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: AppColors.lightBlue,
+                                color: AppColors.primary(context),
                                 shape: BoxShape.circle,
                               ),
                               child: Text(
@@ -493,10 +478,6 @@ class _QuestionScreenState extends State<QuestionScreen> {
   }
 }
 
-
-/// --------------------------------------------------------------------
-/// Paste this at the bottom of question-screen.dart (below the QuestionScreen class).
-/// --------------------------------------------------------------------
 class TimeUpScreen extends StatefulWidget {
   final String subjectName;
 
@@ -510,26 +491,22 @@ class TimeUpScreen extends StatefulWidget {
 }
 
 class _TimeUpScreenState extends State<TimeUpScreen> {
-
   final ApiService _apiService = ApiService();
-
-
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.darkBlack,
+      backgroundColor: AppColors.backgroundColor(context),
       appBar: AppBar(
-        backgroundColor: AppColors.darkBlack,
-        title: const Text(
-          'Time’s Up',
-          style: TextStyle(color: AppColors.myWhite),
+        backgroundColor: AppColors.backgroundColor(context),
+        title: Text(
+          'Time\'s Up',
+          style: TextStyle(color: AppColors.textPrimary(context)),
         ),
         leading: IconButton(
           icon: SvgPicture.asset(
             'assets/images/back.svg',
-            color: AppColors.myWhite,
+            color: AppColors.textPrimary(context),
             height: 30,
           ),
           onPressed: () => Navigator.pop(context),
@@ -545,13 +522,12 @@ class _TimeUpScreenState extends State<TimeUpScreen> {
                 'Time has ended!\nYou have failed this test.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: AppColors.myWhite,
+                  color: AppColors.textPrimary(context),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 24),
-
             ],
           ),
         ),

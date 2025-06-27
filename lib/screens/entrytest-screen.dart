@@ -2,13 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/Widgets/header.dart';
-import 'package:guidera_app/screens/home_screen.dart';
 import 'package:guidera_app/screens/question-screen.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/services/api_service.dart';
 import 'dart:math' as math;
 
-/// Data model for each subject tile
 class SubjectCard {
   final String title;
   final String iconPath;
@@ -39,7 +37,6 @@ class EntryTestScreen extends StatefulWidget {
 class _EntryTestScreenState extends State<EntryTestScreen> {
   final ApiService _apiService = ApiService();
 
-  /// Get subjects with theme-appropriate colors
   List<SubjectCard> _getSubjects(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -70,7 +67,7 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
           titleColor: AppColors.myWhite,
           circleColor: AppColors.myWhite,
           iconColor: AppColors.myBlack,
-          code: 'PHY',
+          code: 'PHYSICS',
         ),
         SubjectCard(
           title: 'English',
@@ -96,45 +93,45 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
         SubjectCard(
           title: 'Chemistry',
           iconPath: 'assets/images/chemistry.svg',
-          gradient: LinearGradient(colors: [AppColors.myBlack, AppColors.myBlack]),
-          titleColor: AppColors.myWhite,
-          circleColor: AppColors.myWhite,
+          gradient: LinearGradient(colors: [AppColors.lightSurface, AppColors.lightSurface]),
+          titleColor: AppColors.darkBlue,
+          circleColor: AppColors.lightBlue.withOpacity(0.1),
           iconColor: AppColors.lightBlue,
           code: 'CHEMISTRY',
         ),
         SubjectCard(
           title: 'Biology',
           iconPath: 'assets/images/biology.svg',
-          gradient: LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
-          titleColor: AppColors.myWhite,
-          circleColor: AppColors.lightSurface,
+          gradient: LinearGradient(colors: [AppColors.darkBlue.withOpacity(0.1), AppColors.darkBlue.withOpacity(0.05)]),
+          titleColor: AppColors.darkBlue,
+          circleColor: AppColors.lightBlue.withOpacity(0.15),
           iconColor: AppColors.lightBlue,
           code: 'BIOLOGY',
         ),
         SubjectCard(
           title: 'Physics',
           iconPath: 'assets/images/physics.svg',
-          gradient: LinearGradient(colors: [AppColors.darkBlue, AppColors.darkBlue]),
-          titleColor: AppColors.myWhite,
-          circleColor: AppColors.myWhite,
+          gradient: LinearGradient(colors: [AppColors.lightSurface, AppColors.lightSurface]),
+          titleColor: AppColors.darkBlue,
+          circleColor: AppColors.lightBlue.withOpacity(0.1),
           iconColor: AppColors.lightBlue,
-          code: 'PHY',
+          code: 'PHYSICS',
         ),
         SubjectCard(
           title: 'English',
           iconPath: 'assets/images/english.svg',
-          gradient: LinearGradient(colors: [AppColors.myGray, AppColors.myGray]),
-          titleColor: AppColors.myWhite,
-          circleColor: AppColors.myWhite,
+          gradient: LinearGradient(colors: [AppColors.lightSurface, AppColors.lightSurface]),
+          titleColor: AppColors.darkBlue,
+          circleColor: AppColors.lightBlue.withOpacity(0.1),
           iconColor: AppColors.lightBlue,
           code: 'ENGLISH',
         ),
         SubjectCard(
           title: 'ANAL Reasoning',
           iconPath: 'assets/images/test.svg',
-          gradient: LinearGradient(colors: [AppColors.myBlack, AppColors.myBlack]),
-          titleColor: AppColors.myWhite,
-          circleColor: AppColors.myWhite,
+          gradient: LinearGradient(colors: [AppColors.lightSurface, AppColors.lightSurface]),
+          titleColor: AppColors.darkBlue,
+          circleColor: AppColors.lightBlue.withOpacity(0.1),
           iconColor: AppColors.lightBlue,
           code: 'ANALYTICAL_REASONING',
         ),
@@ -143,24 +140,40 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
   }
 
   Future<void> _startTest(SubjectCard subject) async {
-    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceColor(context),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: AppColors.primary(context)),
+              const SizedBox(height: 16),
+              Text(
+                'Starting test...',
+                style: TextStyle(color: AppColors.textPrimary(context)),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
 
     try {
-      // Call backend to initiate test
       final response = await _apiService.startTest(subject.code);
-      Navigator.of(context).pop(); // hide loader
+      Navigator.of(context).pop();
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final attemptId = data['attemptId'];
         final questions = data['questions'];
 
-        //Navigate to QuestionScreen with payload
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -172,15 +185,20 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
           ),
         );
       } else {
-        // Error handling
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to start test: ${response.statusCode}')),
+          SnackBar(
+            content: Text('Failed to start test: ${response.statusCode}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -188,11 +206,10 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
   @override
   Widget build(BuildContext context) {
     final subjects = _getSubjects(context);
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? AppColors.myBlack
-          : AppColors.myWhite,
+      backgroundColor: AppColors.backgroundColor(context),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Stack(
@@ -215,7 +232,7 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
       ),
       body: Column(
         children: [
-          const WelcomeCard(userName: 'Stay Focused!'),
+          WelcomeCard(userName: 'Stay Focused!'),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -253,6 +270,8 @@ class SubjectCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(16.0),
@@ -260,11 +279,16 @@ class SubjectCardWidget extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: data.gradient,
           borderRadius: BorderRadius.circular(16.0),
+          border: isDarkMode ? null : Border.all(
+            color: AppColors.borderColor(context),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
               color: AppColors.shadowColor(context),
-              blurRadius: 8,
-              spreadRadius: 2,
+              blurRadius: isDarkMode ? 8 : 12,
+              spreadRadius: isDarkMode ? 2 : 3,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -279,17 +303,19 @@ class SubjectCardWidget extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: data.titleColor,
+                    color: data.titleColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: data.titleColor.withOpacity(0.3),
+                      width: 1,
+                    ),
                   ),
                   child: Text(
                     data.title,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: data.titleColor.computeLuminance() > 0.5
-                          ? AppColors.myBlack
-                          : AppColors.myWhite,
+                      color: data.titleColor,
                     ),
                   ),
                 ),
@@ -301,7 +327,7 @@ class SubjectCardWidget extends StatelessWidget {
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                    color: data.circleColor.withOpacity(0.9),
+                    color: data.circleColor,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -361,9 +387,21 @@ class WelcomeCard extends StatelessWidget {
             : LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [AppColors.myGray, AppColors.myGray],
+          colors: [AppColors.lightSurface, AppColors.lightBorder],
         ),
         borderRadius: BorderRadius.circular(16.0),
+        border: isDarkMode ? null : Border.all(
+          color: AppColors.borderColor(context),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowColor(context),
+            blurRadius: isDarkMode ? 6 : 10,
+            spreadRadius: isDarkMode ? 1 : 2,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -376,6 +414,7 @@ class WelcomeCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 20.0,
                     color: AppColors.darkBlue,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(

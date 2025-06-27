@@ -1,5 +1,3 @@
-// result-screen.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -11,8 +9,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:guidera_app/services/api_service.dart';
 
-/// Screen that displays overall test percentage, grade, and details.
-/// Also offers “Review Answers” and “Try Again” functionality.
 class ResultsScreen extends StatefulWidget {
   final String subjectName;
   final Map<String, dynamic> attemptData;
@@ -27,15 +23,14 @@ class ResultsScreen extends StatefulWidget {
 
   @override
   State<ResultsScreen> createState() => _ResultsScreenState();
-
 }
 
 class _ResultsScreenState extends State<ResultsScreen> {
   late int totalQuestions;
   late int correctCount;
-  late double percentage; // 0.0–1.0
+  late double percentage;
   late String gradeLetter;
-  late String formattedDate; // “MMM dd, yyyy • hh:mm a”
+  late String formattedDate;
   final ApiService _apiService = ApiService();
   bool isRetrying = false;
 
@@ -50,11 +45,8 @@ class _ResultsScreenState extends State<ResultsScreen> {
     correctCount = widget.resultsList
         .where((res) => (res['is_correct'] == true))
         .length;
-    percentage = totalQuestions > 0
-        ? correctCount / totalQuestions
-        : 0.0;
+    percentage = totalQuestions > 0 ? correctCount / totalQuestions : 0.0;
 
-    // Compute letter grade from percentage
     if (percentage >= 0.8) {
       gradeLetter = "A";
     } else if (percentage >= 0.6) {
@@ -67,7 +59,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
       gradeLetter = "F";
     }
 
-    // Format the current date/time
     formattedDate =
         DateFormat("MMM dd, yyyy  •  hh:mm a").format(DateTime.now());
   }
@@ -108,7 +99,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
       final resp = await _apiService.startTest(widget.subjectName);
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
-        // data = { "attemptId": "...", "startedAt": "...", "questions": [ {...}, ... ] }
         final String newAttemptId = data['attemptId'];
         final List<dynamic> newQuestions = data['questions'];
 
@@ -126,12 +116,18 @@ class _ResultsScreenState extends State<ResultsScreen> {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to start a new test: ${resp.statusCode}')),
+          SnackBar(
+            content: Text('Failed to start a new test: ${resp.statusCode}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error starting new test: $e')),
+        SnackBar(
+          content: Text('Error starting new test: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) {
@@ -144,10 +140,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool showTryAgain = gradeLetter.toUpperCase() == "F";
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.darkBlack,
+      backgroundColor: AppColors.backgroundColor(context),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(120),
         child: Stack(
@@ -159,11 +155,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
               child: IconButton(
                 icon: SvgPicture.asset(
                   "assets/images/back.svg",
-                  color: AppColors.myWhite,
+                  color: AppColors.textPrimary(context),
                   height: 30,
                 ),
                 onPressed: () {
-                  // Simply pop to go back to previous screen (e.g. entry test list).
                   Navigator.pop(context);
                 },
               ),
@@ -175,17 +170,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Subject Name, Date/Time, Performance Message.
             Padding(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     widget.subjectName,
-                    style: const TextStyle(
-                      color: AppColors.myWhite,
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -193,37 +186,25 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     formattedDate,
-                    style: const TextStyle(
-                      color: AppColors.myWhite,
+                    style: TextStyle(
+                      color: AppColors.textSecondary(context),
                       fontSize: 14,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  RichText(
-                    text: TextSpan(
-                      text: "",
-                      style: const TextStyle(
-                        color: AppColors.myWhite,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: getPerformanceMessage(percentage),
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontStyle: FontStyle.italic,
-                            color: AppColors.myWhite,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    getPerformanceMessage(percentage),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontStyle: FontStyle.italic,
+                      color: AppColors.textPrimary(context),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 18),
                 ],
               ),
             ),
-
             Center(
               child: CircularPercentIndicator(
                 radius: 120,
@@ -232,16 +213,16 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 percent: percentage,
                 center: Text(
                   "${(percentage * 100).toInt()}%",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.myWhite,
+                    color: AppColors.textPrimary(context),
                   ),
                 ),
                 circularStrokeCap: CircularStrokeCap.round,
                 progressColor:
                 percentage >= 0.6 ? Colors.greenAccent : Colors.redAccent,
-                backgroundColor: Colors.grey.shade800,
+                backgroundColor: AppColors.borderColor(context),
               ),
             ),
             const SizedBox(height: 20),
@@ -249,10 +230,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     "Grade: ",
                     style: TextStyle(
-                      color: AppColors.myWhite,
+                      color: AppColors.textPrimary(context),
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -269,15 +250,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
               ),
             ),
             const SizedBox(height: 30),
-            // Card for Correct vs Incorrect counts.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Card(
-                color: AppColors.lightBlack,
+                color: AppColors.surfaceColor(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 4,
+                elevation: isDarkMode ? 4 : 8,
+                shadowColor: AppColors.shadowColor(context),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Row(
@@ -293,15 +274,15 @@ class _ResultsScreenState extends State<ResultsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            // Performance Chart
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Card(
-                color: AppColors.lightBlack,
+                color: AppColors.surfaceColor(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 4,
+                elevation: isDarkMode ? 4 : 8,
+                shadowColor: AppColors.shadowColor(context),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: SizedBox(
@@ -315,13 +296,11 @@ class _ResultsScreenState extends State<ResultsScreen> {
               ),
             ),
             const SizedBox(height: 30),
-            // Call-to-Action buttons: Review Answers and Try Again
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Always show REVIEW ANSWERS
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.push(
@@ -334,17 +313,18 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         ),
                       );
                     },
-                    icon: const Icon(Icons.visibility, color: Colors.white),
+                    icon: Icon(Icons.visibility, color: AppColors.myWhite),
                     label: const Text("Review Answers"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.darkBlue,
+                      foregroundColor: AppColors.myWhite,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      elevation: 3,
                     ),
                   ),
-
                 ],
               ),
             ),
@@ -369,9 +349,9 @@ class _ResultsScreenState extends State<ResultsScreen> {
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
-            color: AppColors.myWhite,
+            color: AppColors.textPrimary(context),
           ),
         ),
       ],
@@ -379,7 +359,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
   }
 }
 
-/// PerformanceChart widget using fl_chart to display a simple bar chart.
 class PerformanceChart extends StatelessWidget {
   final int correct;
   final int incorrect;
@@ -407,7 +386,7 @@ class PerformanceChart extends StatelessWidget {
                 return Text(
                   value.toInt().toString(),
                   style: TextStyle(
-                      color: AppColors.myWhite, fontSize: 12),
+                      color: AppColors.textPrimary(context), fontSize: 12),
                 );
               },
             ),
@@ -429,17 +408,15 @@ class PerformanceChart extends StatelessWidget {
                   child: Text(
                     title,
                     style: TextStyle(
-                        color: AppColors.myWhite, fontSize: 12),
+                        color: AppColors.textPrimary(context), fontSize: 12),
                   ),
                 );
               },
               reservedSize: 30,
             ),
           ),
-          topTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
         gridData: FlGridData(show: false),
@@ -472,8 +449,6 @@ class PerformanceChart extends StatelessWidget {
   }
 }
 
-/// A new screen that displays each attempted question, shows the user’s selected answer,
-/// highlights the correct answer, and prints the one-line explanation underneath.
 class ReviewAnswersScreen extends StatelessWidget {
   final String subjectName;
   final List<dynamic> resultsList;
@@ -486,21 +461,25 @@ class ReviewAnswersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.darkBlack,
+      backgroundColor: AppColors.backgroundColor(context),
       appBar: AppBar(
-        backgroundColor: AppColors.darkBlack,
+        backgroundColor: AppColors.backgroundColor(context),
         elevation: 0,
         leading: IconButton(
           icon: SvgPicture.asset(
             "assets/images/back.svg",
-            color: AppColors.myWhite,
+            color: AppColors.textPrimary(context),
             height: 30,
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Review Answers",
-            style: TextStyle(color: AppColors.myWhite)),
+        title: Text(
+          "Review Answers",
+          style: TextStyle(color: AppColors.textPrimary(context)),
+        ),
         centerTitle: true,
       ),
       body: ListView.builder(
@@ -509,59 +488,53 @@ class ReviewAnswersScreen extends StatelessWidget {
         itemBuilder: (context, index) {
           final res = resultsList[index] as Map<String, dynamic>;
           final questionText = res['question'] as String;
-          final options =
-          (res['options'] as List<dynamic>).cast<String>();
+          final options = (res['options'] as List<dynamic>).cast<String>();
           final selectedAns = res['selected_ans'] as String;
           final correctAns = res['correct_ans'] as String;
           final explanation = res['explanation'] as String;
           final isCorrect = res['is_correct'] as bool;
 
           return Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Card(
-              color: AppColors.lightBlack,
+              color: AppColors.surfaceColor(context),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
+              elevation: isDarkMode ? 4 : 8,
+              shadowColor: AppColors.shadowColor(context),
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Q${index + 1}. $questionText',
                       style: TextStyle(
-                          color: AppColors.myWhite,
-                          fontSize: 17),
+                        color: AppColors.textPrimary(context),
+                        fontSize: 17,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     ...options.map((opt) {
-                      Color textColor = AppColors.myWhite;
+                      Color textColor = AppColors.textPrimary(context);
                       if (opt == correctAns) {
                         textColor = Colors.greenAccent;
-                      } else if (opt == selectedAns &&
-                          selectedAns != correctAns) {
+                      } else if (opt == selectedAns && selectedAns != correctAns) {
                         textColor = Colors.redAccent;
                       }
                       return Padding(
-                        padding:
-                        const EdgeInsets.symmetric(
-                            vertical: 2.0),
+                        padding: const EdgeInsets.symmetric(vertical: 2.0),
                         child: Row(
                           children: [
                             Icon(
                               opt == selectedAns
                                   ? Icons.radio_button_checked
-                                  : Icons
-                                  .radio_button_unchecked,
+                                  : Icons.radio_button_unchecked,
                               color: opt == correctAns
                                   ? Colors.greenAccent
-                                  : opt == selectedAns &&
-                                  selectedAns !=
-                                      correctAns
+                                  : opt == selectedAns && selectedAns != correctAns
                                   ? Colors.redAccent
-                                  : AppColors.myGray,
+                                  : AppColors.textSecondary(context),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -580,8 +553,8 @@ class ReviewAnswersScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       'Explanation: $explanation',
-                      style: const TextStyle(
-                        color: Colors.grey,
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
                         fontSize: 14,
                         fontStyle: FontStyle.italic,
                       ),
@@ -592,8 +565,7 @@ class ReviewAnswersScreen extends StatelessWidget {
                           ? 'You answered correctly.'
                           : 'Your answer was incorrect.',
                       style: TextStyle(
-                        color:
-                        isCorrect ? Colors.greenAccent : Colors.redAccent,
+                        color: isCorrect ? Colors.greenAccent : Colors.redAccent,
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),

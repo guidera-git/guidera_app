@@ -1,10 +1,7 @@
-// result_loading_screen.dart
-
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lottie/lottie.dart';
 import 'package:guidera_app/Widgets/header.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/services/api_service.dart';
@@ -24,7 +21,8 @@ class ResultLoaderScreen extends StatefulWidget {
   State<ResultLoaderScreen> createState() => _ResultLoaderScreenState();
 }
 
-class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
+class _ResultLoaderScreenState extends State<ResultLoaderScreen>
+    with TickerProviderStateMixin {
   int _currentMessageIndex = 0;
   final List<String> _messages = [
     "Calculating your marks...",
@@ -37,11 +35,47 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
   late Timer _fetchTimer;
   final ApiService _apiService = ApiService();
 
+  late AnimationController _pulseController;
+  late AnimationController _rotationController;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _rotationAnimation;
+
   @override
   void initState() {
     super.initState();
+    _setupAnimations();
     _startMessageCycle();
     _scheduleFetchResult();
+  }
+
+  void _setupAnimations() {
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+    _rotationController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+
+    _pulseAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    _rotationAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(
+      parent: _rotationController,
+      curve: Curves.linear,
+    ));
+
+    _pulseController.repeat(reverse: true);
+    _rotationController.repeat();
   }
 
   void _startMessageCycle() {
@@ -54,7 +88,6 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
   }
 
   void _scheduleFetchResult() {
-    // After 15 seconds, cancel the message timer and fetch actual results.
     _fetchTimer = Timer(const Duration(seconds: 15), () async {
       _messageTimer.cancel();
       await _navigateAfterLoader();
@@ -66,11 +99,6 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
       final resp = await _apiService.getTestResult(widget.attemptId);
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
-        // data structure:
-        // {
-        //   "attempt": { "attempt_id": "...", "subject": "...", "started_at": "...", "completed_at": "...", "score": 80 },
-        //   "results": [ { "id": "...", "question": "...", "options": [...], "selected_ans": "...", "correct_ans": "...", "explanation": "...", "is_correct": true }, ... ]
-        // }
 
         Navigator.pushReplacement(
           context,
@@ -83,11 +111,13 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
           ),
         );
       } else {
-        // If fetching results failed, pop back and show an error.
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to fetch results: ${resp.statusCode}')),
+            SnackBar(
+              content: Text('Failed to fetch results: ${resp.statusCode}'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
@@ -95,7 +125,10 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error fetching results: $e')),
+          SnackBar(
+            content: Text('Error fetching results: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -105,25 +138,23 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
   void dispose() {
     _messageTimer.cancel();
     _fetchTimer.cancel();
+    _pulseController.dispose();
+    _rotationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode =
-        Theme.of(context).brightness == Brightness.dark;
-    final iconColor = isDarkMode ? AppColors.myWhite : AppColors.myBlack;
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? AppColors.myBlack
-          : AppColors.myWhite,
+      backgroundColor: AppColors.backgroundColor(context),
       body: Stack(
         children: [
           Column(
             children: [
               const GuideraHeader(),
-              Expanded(child: _buildLoadingContent(isDarkMode)),
+              Expanded(child: _buildLoadingContent()),
             ],
           ),
           Positioned(
@@ -132,7 +163,7 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
             child: IconButton(
               icon: SvgPicture.asset(
                 'assets/images/back.svg',
-                color: iconColor,
+                color: AppColors.textPrimary(context),
                 width: 34,
               ),
               onPressed: () => Navigator.pop(context),
@@ -143,7 +174,7 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
     );
   }
 
-  Widget _buildLoadingContent(bool isDarkMode) {
+  Widget _buildLoadingContent() {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -151,7 +182,9 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
           const SizedBox(height: 50),
           _buildThinkingMessages(),
           const SizedBox(height: 40),
-          _buildParticleAnimation(),
+          _buildAnimatedLoader(),
+          const SizedBox(height: 30),
+          _buildProgressIndicator(),
         ],
       ),
     );
@@ -177,8 +210,8 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
             key: ValueKey(_currentMessageIndex),
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey[600],
-              fontStyle: FontStyle.italic,
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,
           ),
@@ -188,22 +221,66 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen> {
           'This usually takes 10-15 seconds',
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey[500],
+            color: AppColors.textSecondary(context),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildParticleAnimation() {
-    return SizedBox(
-      width: 300,
-      height: 100,
-      child: Lottie.asset(
-        'assets/animations/loader.json',
-        animate: true,
-        repeat: true,
-        frameRate: FrameRate(60),
+  Widget _buildAnimatedLoader() {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_pulseAnimation, _rotationAnimation]),
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _pulseAnimation.value,
+          child: Transform.rotate(
+            angle: _rotationAnimation.value * 2 * 3.14159,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.lightBlue,
+                    AppColors.darkBlue,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.lightBlue.withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.analytics,
+                color: AppColors.myWhite,
+                size: 40,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProgressIndicator() {
+    return Container(
+      width: 200,
+      height: 4,
+      decoration: BoxDecoration(
+        color: AppColors.borderColor(context),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: LinearProgressIndicator(
+        backgroundColor: Colors.transparent,
+        valueColor: AlwaysStoppedAnimation(AppColors.lightBlue),
+        borderRadius: BorderRadius.circular(2),
       ),
     );
   }

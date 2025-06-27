@@ -5,7 +5,6 @@ import 'package:guidera_app/theme/app_colors.dart';
 import 'package:guidera_app/widgets/header.dart';
 import 'package:guidera_app/services/api_service.dart';
 
-/// A single chat message (user or bot).
 class ChatMessage {
   String text;
   final bool isUser;
@@ -18,7 +17,6 @@ class ChatMessage {
   });
 }
 
-/// Clipper for WhatsApp-like bubble with a tail.
 class WhatsAppBubbleClipper extends CustomClipper<Path> {
   final bool isUser;
   WhatsAppBubbleClipper({required this.isUser});
@@ -59,7 +57,6 @@ class WhatsAppBubbleClipper extends CustomClipper<Path> {
   bool shouldReclip(CustomClipper<Path> old) => false;
 }
 
-/// Bubble widget.
 class WhatsAppBubble extends StatelessWidget {
   final String text;
   final bool isUser;
@@ -71,7 +68,7 @@ class WhatsAppBubble extends StatelessWidget {
 
     final bg = isUser
         ? AppColors.lightBlue
-        : (isDarkMode ? AppColors.lightBlack : AppColors.lightSurface);
+        : AppColors.surfaceColor(context);
     final color = isUser
         ? AppColors.myWhite
         : AppColors.textPrimary(context);
@@ -88,7 +85,6 @@ class WhatsAppBubble extends StatelessWidget {
   }
 }
 
-/// Animated prompt when no messages present.
 class CyclicTypewriterText extends StatefulWidget {
   final List<String> texts;
   final TextStyle style;
@@ -112,12 +108,12 @@ class _CyclicTypewriterTextState extends State<CyclicTypewriterText> {
     while (mounted) {
       final text = widget.texts[idx];
       for (int i = 0; i <= text.length; i++) {
-        setState(() => display = text.substring(0, i));
+        if (mounted) setState(() => display = text.substring(0, i));
         await Future.delayed(const Duration(milliseconds: 100));
       }
       await Future.delayed(const Duration(milliseconds: 1000));
       for (int i = text.length; i >= 0; i--) {
-        setState(() => display = text.substring(0, i));
+        if (mounted) setState(() => display = text.substring(0, i));
         await Future.delayed(const Duration(milliseconds: 100));
       }
       idx = (idx + 1) % widget.texts.length;
@@ -176,7 +172,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     try {
       final resp = await api.sendMessage(text);
       _type(resp, idx);
-    } catch (_) {
+    } catch (e) {
       setState(() {
         messages[idx].isTyping = false;
         messages[idx].text = 'Failed to load response.';
@@ -228,176 +224,170 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.backgroundColor(context), AppColors.backgroundColor(context)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Column(
-          children: [
-            Stack(
-              children: [
-                const GuideraHeader(),
-                Positioned(
-                  left: 16,
-                  top: 79,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: SvgPicture.asset(
-                      'assets/images/back.svg',
-                      height: 30,
-                      color: AppColors.textPrimary(context),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            Expanded(
-              child: messages.isEmpty
-                  ? Center(
-                child: CyclicTypewriterText(
-                  texts: const [
-                    'What can I help with?',
-                    'How can I assist you?',
-                    'Need any help?'
-                  ],
-                  style: TextStyle(
+      backgroundColor: AppColors.backgroundColor(context),
+      body: Column(
+        children: [
+          Stack(
+            children: [
+              const GuideraHeader(),
+              Positioned(
+                left: 16,
+                top: 79,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: SvgPicture.asset(
+                    'assets/images/back.svg',
+                    height: 30,
                     color: AppColors.textPrimary(context),
-                    fontSize: 27,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              )
-                  : ListView.builder(
-                controller: scrollCtrl,
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                itemCount: messages.length,
-                itemBuilder: (context, index) {
-                  final msg = messages[index];
-                  return Container(
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      mainAxisAlignment: msg.isUser
-                          ? MainAxisAlignment.end
-                          : MainAxisAlignment.start,
-                      children: [
-                        WhatsAppBubble(
-                          text: msg.text,
-                          isUser: msg.isUser,
-                        ),
-                      ],
-                    ),
-                  );
-                },
               ),
-            ),
-            // Input & suggestions
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Suggestions dropdown
-                if (suggestions.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceColor(context),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.shadowColor(context),
-                          blurRadius: 6,
-                          offset: Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    constraints: BoxConstraints(maxHeight: 200),
-                    child: Scrollbar(
-                      child: ListView.separated(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        itemCount: suggestions.length,
-                        separatorBuilder: (_, __) => Divider(
-                            color: AppColors.borderColor(context), height: 1),
-                        itemBuilder: (context, i) {
-                          final s = suggestions[i];
-                          return InkWell(
-                            onTap: () {
-                              ctrl.text = s;
-                              setState(() => suggestions.clear());
-                              _onSend();
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Text(s,
-                                  style: TextStyle(
-                                      fontSize: 15,
-                                      color: AppColors.textPrimary(context))),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ],
+          ),
+          Expanded(
+            child: messages.isEmpty
+                ? Center(
+              child: CyclicTypewriterText(
+                texts: const [
+                  'What can I help with?',
+                  'How can I assist you?',
+                  'Need any help?'
+                ],
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 27,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+                : ListView.builder(
+              controller: scrollCtrl,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                final msg = messages[index];
+                return Container(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(
+                    mainAxisAlignment: msg.isUser
+                        ? MainAxisAlignment.end
+                        : MainAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Container(
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceColor(context),
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: TextField(
-                            focusNode: focusNode,
-                            controller: ctrl,
-                            onChanged: _onChanged,
-                            style: TextStyle(
-                                fontSize: 15, color: AppColors.textPrimary(context)),
-                            decoration: InputDecoration(
-                              hintText: 'Type your message...',
-                              hintStyle: TextStyle(
-                                  color: AppColors.textSecondary(context)),
-                              contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 20),
-                              border: InputBorder.none,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        height: 50,
-                        width: 50,
-                        decoration: BoxDecoration(
-                          color: AppColors.lightBlue,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.lightBlue.withOpacity(0.5),
-                              blurRadius: 8,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: IconButton(
-                          icon: SvgPicture.asset('assets/images/send.svg',
-                              width: 24, color: AppColors.myWhite),
-                          onPressed: _onSend,
-                        ),
+                      WhatsAppBubble(
+                        text: msg.text,
+                        isUser: msg.isUser,
                       ),
                     ],
                   ),
-                ),
-              ],
+                );
+              },
             ),
-          ],
-        ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (suggestions.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceColor(context),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderColor(context)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.shadowColor(context),
+                        blurRadius: 6,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  constraints: BoxConstraints(maxHeight: 200),
+                  child: Scrollbar(
+                    child: ListView.separated(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      itemCount: suggestions.length,
+                      separatorBuilder: (_, __) => Divider(
+                          color: AppColors.borderColor(context), height: 1),
+                      itemBuilder: (context, i) {
+                        final s = suggestions[i];
+                        return InkWell(
+                          onTap: () {
+                            ctrl.text = s;
+                            setState(() => suggestions.clear());
+                            _onSend();
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Text(s,
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    color: AppColors.textPrimary(context))),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceColor(context),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: AppColors.borderColor(context)),
+                        ),
+                        child: TextField(
+                          focusNode: focusNode,
+                          controller: ctrl,
+                          onChanged: _onChanged,
+                          style: TextStyle(
+                              fontSize: 15, color: AppColors.textPrimary(context)),
+                          decoration: InputDecoration(
+                            hintText: 'Type your message...',
+                            hintStyle: TextStyle(
+                                color: AppColors.textSecondary(context)),
+                            contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 20),
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      height: 50,
+                      width: 50,
+                      decoration: BoxDecoration(
+                        color: AppColors.lightBlue,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.lightBlue.withOpacity(0.5),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: SvgPicture.asset('assets/images/send.svg',
+                            width: 24, color: AppColors.myWhite),
+                        onPressed: _onSend,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

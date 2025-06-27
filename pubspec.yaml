@@ -53,9 +53,11 @@ dependencies:
   http: ^1.4.0           # Lightweight HTTP client
   flutter_secure_storage: ^9.0.0   # for storing JWT safely
   timezone: ^0.9.2
-  firebase_core: ^2.24.0
   firebase_messaging: ^14.7.4
   flutter_local_notifications: ^17.1.2
+  google_sign_in: ^6.1.5
+  firebase_auth: ^4.15.3
+  firebase_core: ^2.24.2
 
 
 

@@ -36,8 +36,7 @@ class GuideraScaffold extends StatelessWidget {
         items: [
           FancyNavItem(label: "Home", svgPath: "assets/images/home.svg"),
           FancyNavItem(label: "Find", svgPath: "assets/images/search.svg"),
-          FancyNavItem(label: "Analytics", svgPath: "assets/images/analytics.svg"),
-          FancyNavItem(label: "Entry Test", svgPath: "assets/images/entry_test.svg"),
+          FancyNavItem(label: "Saved", svgPath: "assets/images/save.svg"),
           FancyNavItem(label: "Chatbot", svgPath: "assets/images/chatbot.svg"),
         ],
         initialIndex: currentIndex,
