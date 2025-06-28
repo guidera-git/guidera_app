@@ -20,6 +20,7 @@ import 'package:guidera_app/screens/settings_screen.dart';
 import 'package:guidera_app/screens/university_search_screen.dart';
 import 'package:guidera_app/screens/analytics_screen.dart';
 import 'package:guidera_app/widgets/drawer.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -243,7 +244,6 @@ class _HomeTabState extends State<HomeTab> {
     return completion;
   }
 
-
   Widget _buildDashboardCard({
     required String title,
     required String subtitle,
@@ -335,7 +335,6 @@ class _HomeTabState extends State<HomeTab> {
       ),
     );
   }
-
 
   Widget _buildQuickStatsCard() {
     if (_isLoadingData) {
@@ -438,8 +437,6 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  // Enhanced grid card with improved light mode styling
-  // Enhanced grid card with improved styling for both modes
   Widget _buildGridCard(
       BuildContext context,
       String title,
@@ -640,22 +637,11 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-
-  String _getLastLogin() {
-    // Mock last login time - you should get this from your API
-    final lastLogin = DateTime.now().subtract(const Duration(hours: 2, minutes: 30));
+  // FIXED: Show current date and time instead of last login
+  String _getCurrentDateTime() {
     final now = DateTime.now();
-    final difference = now.difference(lastLogin);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
+    final formatter = DateFormat('MMM dd, yyyy • hh:mm a');
+    return formatter.format(now);
   }
 
   @override
@@ -696,7 +682,7 @@ class _HomeTabState extends State<HomeTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Section with Last Login
+            // Header Section with Current Date and Time
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               child: Row(
@@ -722,7 +708,7 @@ class _HomeTabState extends State<HomeTab> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Last login: ${_getLastLogin()}',
+                        _getCurrentDateTime(),
                         style: TextStyle(
                           color: AppColors.textSecondary(context),
                           fontSize: 12,
@@ -799,6 +785,7 @@ class _HomeTabState extends State<HomeTab> {
                   : null,
             ),
 
+            // FIXED: Removed circular progress indicator from profile completion
             _buildDashboardCard(
               title: 'Profile Completion',
               subtitle: '${(_calculateProfileCompletion() * 100).round()}% completed',
@@ -810,12 +797,6 @@ class _HomeTabState extends State<HomeTab> {
                   MaterialPageRoute(builder: (_) => const UserProfileScreen()),
                 );
               },
-              trailing: CircularProgressIndicator(
-                value: _calculateProfileCompletion(),
-                backgroundColor: AppColors.borderColor(context),
-                valueColor: const AlwaysStoppedAnimation(Colors.green),
-                strokeWidth: 3,
-              ),
             ),
 
             // Quick Actions

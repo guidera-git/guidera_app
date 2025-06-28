@@ -165,7 +165,7 @@ class _UniversityInformationState extends State<UniversityInformation> {
               ),
               const SizedBox(width: 12),
               Text(
-                'Application Deadline Exceeded',
+                'Deadline Exceeded',
                 style: TextStyle(
                   color: AppColors.textPrimary(context),
                   fontSize: 18,

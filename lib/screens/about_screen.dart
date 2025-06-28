@@ -18,8 +18,7 @@ Guidera is an innovative platform designed to assist students in selecting and a
       'name': 'Aaliyan',
       'role': 'Frontend Developer',
       'bio': 'Expert in UI/UX and Flutter design.',
-      'imageUrl':
-      'https://media.licdn.com/dms/image/v2/D4D03AQGny3fTTojZ0w/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1724948029439?e=1747872000&v=beta&t=AyRl0cKnFepv_LuLq-CoZfFyfqaqFA0M9Q2sfUMLXFE'
+      'imageUrl': 'https://media.licdn.com/dms/image/v2/D4D03AQGny3fTTojZ0w/profile-displayphoto-shrink_100_100/profile-displayphoto-shrink_100_100/0/1724948029439?e=1747872000&v=beta&t=AyRl0cKnFepv_LuLq-CoZfFyfqaqFA0M9Q2sfUMLXFE'
     },
     {
       'name': 'Saad',

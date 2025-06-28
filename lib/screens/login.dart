@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:guidera_app/screens/home_screen.dart';
 import 'package:guidera_app/screens/signup.dart';
+import 'package:guidera_app/screens/forgot_password_screen.dart';
+import 'package:guidera_app/services/auth_service.dart';
 import 'package:guidera_app/theme/app_colors.dart';
 import '../Widgets/header.dart';
-import '../services/api_service.dart';
 import 'login-signup.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'dart:convert';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -21,8 +19,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final _api = ApiService();
-  final _storage = FlutterSecureStorage();
+  final _authService = AuthService();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -31,34 +29,54 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> login() async {
-    final response = await _api.post(
-      '/auth/login',
-      {
-        'email': _emailController.text.trim(),
-        'password': _passwordController.text,
-      },
-    );
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
 
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      await _storage.write(key: 'token', value: data['token']);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login successful!')),
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final result = await _authService.login(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(data['error'] ?? 'Login failed')),
-      );
+
+      if (result['success']) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Login successful!')),
+          );
+          // FIXED: Use pushAndRemoveUntil to prevent going back to login
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false, // This removes all previous routes
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['error'] ?? 'Login failed')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       backgroundColor: AppColors.backgroundColor(context),
       appBar: PreferredSize(
@@ -76,14 +94,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 30,
                 ),
                 onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  } else {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginSignup()),
-                    );
-                  }
+                  // FIXED: Always go back to LoginSignup screen
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const LoginSignup()),
+                  );
                 },
               ),
             ),
@@ -145,6 +159,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (value == null || value.isEmpty) {
                           return "Please enter your email";
                         }
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                          return "Please enter a valid email";
+                        }
                         return null;
                       },
                     ),
@@ -184,7 +201,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          // TODO: Implement forgot password logic.
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                          );
                         },
                         child: Text(
                           "Forgot Password?",
@@ -205,8 +224,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                        onPressed: login,
-                        child: const Text(
+                        onPressed: _isLoading ? null : _login,
+                        child: _isLoading
+                            ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                            : const Text(
                           "Log in",
                           style: TextStyle(
                             fontSize: 18,

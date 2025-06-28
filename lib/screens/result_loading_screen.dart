@@ -32,8 +32,8 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen>
     "Your result is ready!"
   ];
   late Timer _messageTimer;
-  late Timer _fetchTimer;
   final ApiService _apiService = ApiService();
+  bool _isLoading = true;
 
   late AnimationController _pulseController;
   late AnimationController _rotationController;
@@ -45,7 +45,7 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen>
     super.initState();
     _setupAnimations();
     _startMessageCycle();
-    _scheduleFetchResult();
+    _fetchResultContinuously(); // FIXED: Start fetching immediately
   }
 
   void _setupAnimations() {
@@ -80,64 +80,73 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen>
 
   void _startMessageCycle() {
     _messageTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (mounted) {
+      if (mounted && _isLoading) {
         setState(() => _currentMessageIndex =
             (_currentMessageIndex + 1) % _messages.length);
       }
     });
   }
 
-  void _scheduleFetchResult() {
-    _fetchTimer = Timer(const Duration(seconds: 15), () async {
-      _messageTimer.cancel();
-      await _navigateAfterLoader();
-    });
+  // FIXED: Continuously fetch results until available
+  Future<void> _fetchResultContinuously() async {
+    while (_isLoading && mounted) {
+      try {
+        final resp = await _apiService.getTestResult(widget.attemptId);
+        if (resp.statusCode == 200) {
+          final data = jsonDecode(resp.body);
+
+          // Stop loading and navigate to results
+          _messageTimer.cancel();
+          setState(() => _isLoading = false);
+
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ResultsScreen(
+                  subjectName: widget.subjectName,
+                  attemptData: data['attempt'],
+                  resultsList: data['results'] as List<dynamic>,
+                ),
+              ),
+            );
+          }
+          return;
+        } else if (resp.statusCode == 404) {
+          // Result not ready yet, wait and try again
+          await Future.delayed(const Duration(seconds: 2));
+        } else {
+          // Other error, show error message
+          if (mounted) {
+            _showErrorAndGoBack('Failed to fetch results: ${resp.statusCode}');
+          }
+          return;
+        }
+      } catch (e) {
+        // Network or other error, wait and try again
+        await Future.delayed(const Duration(seconds: 3));
+      }
+    }
   }
 
-  Future<void> _navigateAfterLoader() async {
-    try {
-      final resp = await _apiService.getTestResult(widget.attemptId);
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body);
+  void _showErrorAndGoBack(String message) {
+    _messageTimer.cancel();
+    setState(() => _isLoading = false);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResultsScreen(
-              subjectName: widget.subjectName,
-              attemptData: data['attempt'],
-              resultsList: data['results'] as List<dynamic>,
-            ),
-          ),
-        );
-      } else {
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to fetch results: ${resp.statusCode}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error fetching results: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   @override
   void dispose() {
     _messageTimer.cancel();
-    _fetchTimer.cancel();
     _pulseController.dispose();
     _rotationController.dispose();
     super.dispose();
@@ -218,7 +227,7 @@ class _ResultLoaderScreenState extends State<ResultLoaderScreen>
         ),
         const SizedBox(height: 10),
         Text(
-          'This usually takes 10-15 seconds',
+          'Please wait while we process your results...',
           style: TextStyle(
             fontSize: 14,
             color: AppColors.textSecondary(context),
