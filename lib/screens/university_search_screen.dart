@@ -355,7 +355,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
               Expanded(child: _buildBody()),
             ],
           ),
-          // Draggable Compare Button
+          // Draggable Compare Button - FIXED: White text color in dark mode
           if (_selectedForComparison.length >= 2)
             Positioned(
               left: _compareButtonOffset.dx,
@@ -370,7 +370,10 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
                   backgroundColor: AppColors.lightBlue,
                   label: Text(
                     "Compare (${_selectedForComparison.length})",
-                    style: const TextStyle(fontFamily: 'Product Sans'),
+                    style: TextStyle(
+                      fontFamily: 'Product Sans',
+                      color: AppColors.myWhite, // FIXED: Ensure white text
+                    ),
                   ),
                   icon: SvgPicture.asset(
                     'assets/images/compare.svg',
@@ -1003,6 +1006,7 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
     );
   }
 
+  // FIXED: Improved comparison table with better responsive design
   Widget _buildComparisonTable(List<Program> selectedPrograms) {
     final List<String> attributes = [
       'Program Title',
@@ -1012,10 +1016,6 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
       'Credit Hours',
       'Location',
     ];
-
-    final double criteriaWidth = 150;
-    final double programWidth = 200;
-    final double totalWidth = criteriaWidth + (selectedPrograms.length * programWidth);
 
     return Container(
       decoration: BoxDecoration(
@@ -1028,109 +1028,80 @@ class _UniversitySearchScreenState extends State<UniversitySearchScreen> {
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: SizedBox(
-          width: totalWidth,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row
-              Container(
-                height: 60,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.lightBlue, AppColors.darkBlue],
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: MediaQuery.of(context).size.width - 40,
+          ),
+          child: DataTable(
+            headingRowColor: MaterialStateProperty.all(AppColors.lightBlue),
+            border: TableBorder.all(
+              color: AppColors.borderColor(context),
+              width: 0.5,
+            ),
+            columns: [
+              DataColumn(
+                label: Container(
+                  width: 120,
+                  child: Text(
+                    'Criteria',
+                    style: TextStyle(
+                      color: AppColors.myWhite,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    _buildHeaderCell('Criteria', criteriaWidth),
-                    ...selectedPrograms.map((program) => _buildHeaderCell(program.universityTitle, programWidth)),
-                  ],
                 ),
               ),
-              // Data Rows
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: attributes.length,
-                itemBuilder: (context, index) {
-                  final attr = attributes[index];
-                  return Container(
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: index % 2 == 0
-                          ? AppColors.surfaceColor(context)
-                          : AppColors.backgroundColor(context),
-                      border: Border(
-                        bottom: BorderSide(
-                          color: AppColors.borderColor(context),
-                          width: 0.5,
-                        ),
+              ...selectedPrograms.map((program) => DataColumn(
+                label: Container(
+                  width: 150,
+                  child: Text(
+                    program.universityTitle,
+                    style: TextStyle(
+                      color: AppColors.myWhite,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                ),
+              )),
+            ],
+            rows: attributes.map((attr) => DataRow(
+              cells: [
+                DataCell(
+                  Container(
+                    width: 120,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      attr,
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        _buildAttributeCell(attr, criteriaWidth),
-                        ...selectedPrograms.map((program) => _buildValueCell(_getAttributeValue(program, attr), programWidth)),
-                      ],
+                  ),
+                ),
+                ...selectedPrograms.map((program) => DataCell(
+                  Container(
+                    width: 150,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      _getAttributeValue(program, attr),
+                      style: TextStyle(
+                        color: AppColors.textPrimary(context),
+                        fontSize: 13,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
                     ),
-                  );
-                },
-              ),
-            ],
+                  ),
+                )),
+              ],
+            )).toList(),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderCell(String text, double width) {
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(12),
-      alignment: Alignment.center,
-      child: Text(
-        text,
-        style: TextStyle(
-          color: AppColors.myWhite,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  Widget _buildAttributeCell(String text, double width) {
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(12),
-      color: AppColors.lightBlue.withOpacity(0.1),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: AppColors.textPrimary(context),
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildValueCell(String text, double width) {
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(12),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: AppColors.textPrimary(context),
-          fontSize: 14,
         ),
       ),
     );

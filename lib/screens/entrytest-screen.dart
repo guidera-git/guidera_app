@@ -79,7 +79,7 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
           code: 'ENGLISH',
         ),
         SubjectCard(
-          title: 'ANAL Reasoning',
+          title: 'Analytical ',
           iconPath: 'assets/images/test.svg',
           gradient: LinearGradient(colors: [AppColors.myWhite, AppColors.myWhite]),
           titleColor: AppColors.darkBlue,
@@ -102,7 +102,7 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
         SubjectCard(
           title: 'Biology',
           iconPath: 'assets/images/biology.svg',
-          gradient: LinearGradient(colors: [AppColors.darkBlue.withOpacity(0.1), AppColors.darkBlue.withOpacity(0.05)]),
+          gradient: LinearGradient(colors: [AppColors.lightSurface, AppColors.lightSurface]),
           titleColor: AppColors.darkBlue,
           circleColor: AppColors.lightBlue.withOpacity(0.15),
           iconColor: AppColors.lightBlue,
@@ -127,7 +127,7 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
           code: 'ENGLISH',
         ),
         SubjectCard(
-          title: 'ANAL Reasoning',
+          title: 'Analytical',
           iconPath: 'assets/images/test.svg',
           gradient: LinearGradient(colors: [AppColors.lightSurface, AppColors.lightSurface]),
           titleColor: AppColors.darkBlue,
@@ -143,26 +143,7 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Center(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceColor(context),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: AppColors.primary(context)),
-              const SizedBox(height: 16),
-              Text(
-                'Starting test...',
-                style: TextStyle(color: AppColors.textPrimary(context)),
-              ),
-            ],
-          ),
-        ),
-      ),
+      builder: (context) => TestLoadingDialog(subjectTitle: subject.title),
     );
 
     try {
@@ -260,6 +241,241 @@ class _EntryTestScreenState extends State<EntryTestScreen> {
       ),
     );
   }
+}
+
+class TestLoadingDialog extends StatefulWidget {
+  final String subjectTitle;
+
+  const TestLoadingDialog({Key? key, required this.subjectTitle}) : super(key: key);
+
+  @override
+  State<TestLoadingDialog> createState() => _TestLoadingDialogState();
+}
+
+class _TestLoadingDialogState extends State<TestLoadingDialog>
+    with TickerProviderStateMixin {
+  late AnimationController _rotationController;
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat();
+
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _scaleController,
+      curve: Curves.elasticOut,
+    ));
+
+    _scaleController.forward();
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    _scaleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceColor(context),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: isDarkMode
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.grey.withOpacity(0.2),
+                blurRadius: 20,
+                spreadRadius: 5,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Custom animated loading indicator
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: isDarkMode
+                        ? [AppColors.darkBlue, AppColors.lightBlue]
+                        : [AppColors.lightBlue, AppColors.darkBlue],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.lightBlue.withOpacity(0.3),
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Outer rotating ring
+                    AnimatedBuilder(
+                      animation: _rotationController,
+                      builder: (context, child) {
+                        return Transform.rotate(
+                          angle: _rotationController.value * 2 * math.pi,
+                          child: Container(
+                            width: 70,
+                            height: 70,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: CustomPaint(
+                              painter: LoadingRingPainter(
+                                progress: _rotationController.value,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    // Center icon
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.play_arrow_rounded,
+                        color: AppColors.lightBlue,
+                        size: 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Subject title
+              Text(
+                widget.subjectTitle,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary(context),
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              const SizedBox(height: 8),
+
+              // Loading text with animated dots
+              AnimatedBuilder(
+                animation: _rotationController,
+                builder: (context, child) {
+                  int dotCount = ((_rotationController.value * 3) % 3).floor() + 1;
+                  return Text(
+                    'Preparing your test${'.' * dotCount}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppColors.textSecondary(context),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  );
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Motivational text
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.lightBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.lightBlue.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  'Get ready to showcase your knowledge!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.lightBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class LoadingRingPainter extends CustomPainter {
+  final double progress;
+
+  LoadingRingPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 5;
+
+    // Draw the progress arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress,
+      false,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
 
 class SubjectCardWidget extends StatelessWidget {

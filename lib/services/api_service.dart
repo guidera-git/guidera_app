@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  static const _baseUrl = 'http://192.168.1.77:3000/api';
+  static const _baseUrl = 'http://192.168.85.128:3000/api';
   final _storage = const FlutterSecureStorage();
 
   // ───────────────────────────────────────────────────────────────────
@@ -52,6 +52,34 @@ class ApiService {
       if (token != null) headers['Authorization'] = 'Bearer $token';
     }
     return http.delete(Uri.parse('$_baseUrl$path'), headers: headers);
+  }
+
+  // ───────────────────────────────────────────────────────────────────
+  // Authentication methods
+
+  /// Google Sign-In
+  Future<http.Response> googleSignIn(String idToken) {
+    return post('/auth/google', {'idToken': idToken});
+  }
+
+  /// Send OTP to email
+  Future<http.Response> sendOTP(String email) {
+    return post('/auth/send-otp', {'email': email});
+  }
+
+  /// Verify OTP
+  Future<http.Response> verifyOTP(String email, String otp) {
+    return post('/auth/verify-otp', {'email': email, 'otp': otp});
+  }
+
+  /// Forgot password
+  Future<http.Response> forgotPassword(String email) {
+    return post('/auth/forgot-password', {'email': email});
+  }
+
+  /// Reset password
+  Future<http.Response> resetPassword(String token, String password) {
+    return post('/auth/reset-password', {'token': token, 'password': password});
   }
 
   // ───────────────────────────────────────────────────────────────────
